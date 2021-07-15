@@ -49,7 +49,7 @@
 
 ------------------------
 
-### 详细简历欢迎邮箱（qiujingqiujing@foxmail.com）联系
+## 详细简历欢迎邮箱（qiujingqiujing@foxmail.com）联系
 
 
 
