@@ -1,6 +1,7 @@
-## 姓名
 
-**邮箱：** qiujingqiujing@foxmail.com　　　　　　　
+## 个人简历　　　　　
+
+**数字芯片设计工程师**　
 
 ----------------------------------
 
@@ -49,7 +50,7 @@
 
 ------------------------
 
-## 详细简历欢迎邮箱（qiujingqiujing@foxmail.com）联系
+**详细简历欢迎邮箱（qiujingqiujing@foxmail.com）联系**
 
 
 
