@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>羟基太白 · qiangjitaibai</title>
+<style>
+  :root {
+    --bg: #0a0a0f; --card: #12121a; --border: #1e1e2e;
+    --text: #cdd6f4; --sub: #6c7086; --heading: #f5f5f9;
+    --acc: #89b4fa; --acc2: #f38ba8; --acc3: #a6e3a1; --acc4: #fab387;
+    --glow: rgba(137,180,250,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .bg-grid {
+    position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .bg-glow {
+    position: fixed; width: 600px; height: 600px; border-radius: 50%; filter: blur(120px); opacity: .08; pointer-events: none; z-index: 0;
+  }
+  .bg-glow.g1 { top: -200px; right: -100px; background: var(--acc); }
+  .bg-glow.g2 { bottom: -200px; left: -100px; background: var(--acc2); }
+  .container { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 80px 24px 60px; }
+  header { margin-bottom: 56px; }
+  header .avatar {
+    width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, var(--acc), var(--acc3));
+    display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 20px;
+  }
+  header h1 { font-size: 32px; color: var(--heading); font-weight: 700; letter-spacing: -.5px; }
+  header .handle { color: var(--sub); font-size: 15px; margin-top: 4px; }
+  header .bio { color: var(--sub); font-size: 15px; margin-top: 12px; line-height: 1.7; max-width: 480px; }
+  header .tag-row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  header .tag-row span {
+    padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--border); color: var(--sub);
+  }
+  section { margin-bottom: 48px; }
+  section h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--acc); margin-bottom: 20px; font-weight: 700;
+  }
+  .cards { display: grid; gap: 12px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 26px; text-decoration: none; color: var(--text);
+    transition: all .25s; display: flex; align-items: center; gap: 16px;
+    position: relative; overflow: hidden;
+  }
+  .card:hover {
+    border-color: var(--acc); transform: translateX(6px);
+    box-shadow: 0 4px 20px var(--glow);
+  }
+  .card .icon {
+    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 20px;
+  }
+  .card:nth-child(1) .icon { background: rgba(137,180,250,.12); }
+  .card:nth-child(2) .icon { background: rgba(166,227,161,.12); }
+  .card:nth-child(3) .icon { background: rgba(243,139,168,.12); }
+  .card:nth-child(4) .icon { background: rgba(250,179,135,.12); }
+  .card .info { flex: 1; min-width: 0; }
+  .card .info h3 { font-size: 16px; color: var(--heading); font-weight: 600; margin-bottom: 3px; }
+  .card .info p { font-size: 13px; color: var(--sub); line-height: 1.5; }
+  .card .arrow { color: var(--sub); font-size: 16px; transition: transform .25s; flex-shrink: 0; }
+  .card:hover .arrow { transform: translateX(4px); color: var(--acc); }
+  .link-row { display: flex; gap: 16px; margin-top: 56px; }
+  .link-row a {
+    font-size: 14px; color: var(--sub); text-decoration: none; transition: color .2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .link-row a:hover { color: var(--heading); }
+  footer { margin-top: 72px; padding-top: 32px; border-top: 1px solid var(--border); }
+  footer p { color: var(--sub); font-size: 13px; }
+  @media (max-width: 600px) {
+    .container { padding: 48px 16px 40px; }
+    header h1 { font-size: 26px; }
+    .card { padding: 18px 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow g1"></div>
+<div class="bg-glow g2"></div>
+<div class="container">
+  <header>
+    <div class="avatar">⚛️</div>
+    <h1>羟基太白</h1>
+    <div class="handle">@qiangjitaibai</div>
+    <p class="bio">脑子快，话不多，习惯靠自己。认真生活，快乐工作。对技术有好奇心——从 LZA 浮点算法到分析哲学，什么都想搞明白。</p>
+    <div class="tag-row">
+      <span>AI 编程</span><span>浮点运算</span><span>RISC-V</span><span>分析哲学</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>📚 课程</h2>
+    <div class="cards">
+      <a class="card" href="https://qiangjitaibai.github.io/claude-code-course-15d/">
+        <div class="icon">💻</div>
+        <div class="info">
+          <h3>Claude Code 15 天实战指南</h3>
+          <p>Trae 安装 · 国内大模型接入 · 文案创作 · 数据处理 · 工作流自动化</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+      <a class="card" href="https://qiangjitaibai.github.io/cola-skill-5days/">
+        <div class="icon">🛠️</div>
+        <div class="info">
+          <h3>5 天学会 Skill 编写</h3>
+          <p>Description 写法 · 三层架构 · Design Patterns · 完整实战</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+      <a class="card" href="https://qiangjitaibai.github.io/analytic-philosophy-15d/">
+        <div class="icon">🧠</div>
+        <div class="info">
+          <h3>15 天分析哲学入门</h3>
+          <p>弗雷格 · 罗素 · 维特根斯坦 · 蒯因 · 克里普克 · SEP 参考链接</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+      <a class="card" href="#">
+        <div class="icon">📄</div>
+        <div class="info">
+          <h3>我的简历</h3>
+          <p>把你的简历链接或 PDF 给我，我来挂上去</p>
+        </div>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <div class="link-row">
+    <a href="https://github.com/qiangjitaibai">GitHub</a>
+  </div>
+
+  <footer>
+    <p>认真生活，快乐工作 · 2026</p>
+  </footer>
+</div>
+</body>
+</html>
