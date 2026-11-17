@@ -29,7 +29,7 @@
     h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.7rem); line-height: 1.15; text-wrap: balance; }
     .intro { margin: .9rem 0 0; color: var(--muted); }
     .lead { margin-top: clamp(1.8rem, 4vw, 2.7rem); display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 1rem; }
-    .current, .history { padding: clamp(1.2rem, 3.2vw, 2.1rem); border: 1px solid var(--line); border-radius: 1rem; }
+    .current, .history, .guestbook { padding: clamp(1.2rem, 3.2vw, 2.1rem); border: 1px solid var(--line); border-radius: 1rem; }
     .current { background: var(--surface); border-color: #465b81; }
     .history { display: flex; flex-direction: column; justify-content: space-between; background: #10111a; }
     h2 { margin: 0; font-size: clamp(1.25rem, 2.5vw, 1.65rem); line-height: 1.35; }
@@ -43,6 +43,7 @@
     .secondary ul { margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .8rem 1.75rem; list-style: none; }
     .secondary a { color: var(--muted); }
     .secondary a:hover { color: var(--accent); }
+    .guestbook { margin-top: 1.2rem; background: #10111a; }
     @media (max-width: 43rem) {
       main { width: min(64rem, calc(100% - 2rem)); }
       .lead { grid-template-columns: minmax(0, 1fr); }
@@ -73,12 +74,17 @@
         </div>
       </section>
     </div>
-    <nav class="secondary" aria-label="个人资料与课程">
+    <nav class="secondary" aria-label="站点导航">
       <ul>
         <li><a href="/about/">自我简介</a></li>
-        <li><a href="/courses/">课程链接</a></li>
+        <li><a href="#guestbook">留言板</a></li>
       </ul>
     </nav>
+    <section class="guestbook" id="guestbook" aria-labelledby="guestbook-title">
+      <h2 id="guestbook-title">留言板</h2>
+      <p class="summary">欢迎聊聊周刊、推荐选题，或打个招呼。登录 GitHub 后即可公开留言和回复。</p>
+      <a class="read" href="https://github.com/qiangjitaibai/qiangjitaibai.github.io/discussions/1">前往 GitHub 留言 <span aria-hidden="true">↗</span></a>
+    </section>
   </main>
 </body>
 </html>
