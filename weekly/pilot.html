@@ -3,81 +3,159 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="处理器架构与矢量设计周报试刊：RVV 与 CGRA、香山向量状态恢复、Arm/TSO 和矩阵运算专利。">
+<meta name="description" content="处理器架构与矢量设计周报第 001 期。富士通的 RVV 与 CGRA 对照、香山向量状态恢复、Apple 内存序与 SPEC CPU2026 评估。">
 <title>处理器架构与矢量设计周报 · 第 001 期 · 试刊号</title>
 <style>
 :root {
   color-scheme: light;
-  --paper:#f7f6f0; --ink:#172822; --muted:#4c5f54; --accent:#135b42;
-  --line:#ccd5c8; --dark:#102922; --light:#f4f7ee;
+  --paper: #f7f5ee;
+  --panel: #fcfaf4;
+  --ink: #1c2c25;
+  --muted: #485d51;
+  --accent: #185941;
+  --line: #cdd6c9;
+  --dark: #112820;
+  --hero-text: #f4f3e7;
+  --hero-soft: #bfd0c4;
+  --gold: #f3cf87;
 }
-* { box-sizing:border-box; }
-html { scroll-padding-top:1rem; }
-body { margin:0; background:var(--paper); color:var(--ink); font:1.05rem/1.8 "Source Sans 3", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
-a { color:var(--accent); text-underline-offset:.23em; }
-:focus-visible { outline:2px solid currentColor; outline-offset:4px; }
-.skip { position:absolute; left:.8rem; top:.8rem; z-index:1; background:var(--paper); padding:.35rem .65rem; transform:translateY(-180%); }
-.skip:focus { transform:translateY(0); }
-.masthead { background:var(--dark); color:var(--light); border-bottom:4px solid #62947b; }
-.masthead a { color:#c9e9d4; }
-.masthead-inner { width:min(70rem, calc(100% - 3rem)); margin:auto; padding:2rem 0 clamp(2.1rem,6vw,4.2rem); }
-.masthead nav { display:flex; flex-wrap:wrap; gap:.5rem 1.5rem; font-size:.95rem; }
-h1 { margin:clamp(1.55rem,4vw,2.8rem) 0 1rem; max-width:19ch; font-size:clamp(2rem,6vw,4.4rem); line-height:1.13; letter-spacing:-.025em; text-wrap:balance; }
-.issue { color:#d4ead7; font-size:1rem; font-variant-numeric:tabular-nums; }
-.issue p { margin:.35rem 0; max-width:55rem; }
-main { max-width:70rem; width:calc(100% - 3rem); margin:auto; padding:2rem 0 4rem; }
-.article { max-width:51rem; margin:0 auto; overflow-wrap:anywhere; }
-.toc { max-width:51rem; margin:0 auto 2.5rem; padding:1rem 0; border-bottom:1px solid var(--line); }
-.toc p { margin:0 0 .55rem; font-weight:650; }
-.toc ul { display:flex; flex-wrap:wrap; gap:.35rem 1.05rem; list-style:none; padding:0; margin:0; font-size:.95rem; }
-h2 { font-size:clamp(1.4rem,4vw,2rem); line-height:1.35; margin:2.9rem 0 1rem; padding-top:.85rem; border-top:1px solid var(--line); }
-h2:first-child { margin-top:0; padding-top:0; border:0; }
-h3 { font-size:clamp(1.12rem,2.6vw,1.44rem); line-height:1.45; margin:1.8rem 0 .4rem; }
-p { margin:.6rem 0 1.1rem; }
-h3 + p > em:only-child { display:block; font-style:normal; font-size:.95rem; color:var(--muted); line-height:1.5; }
-.article > ul, details ul { padding-left:1.4rem; }
-.article > ul:first-of-type { background:#e9efe7; padding:1rem 1.3rem 1rem 2.25rem; border-left:4px solid #3b7a5c; }
-li + li { margin-top:.4rem; }
-.toc li + li { margin-top:0; }
-code { font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.9em; background:#e9ede6; padding:.08em .24em; border-radius:.2em; }
-.table-scroll { overflow-x:auto; margin:1.2rem 0; border:1px solid var(--line); border-radius:.5rem; }
-table { border-collapse:collapse; width:100%; min-width:36rem; font-size:.95rem; font-variant-numeric:tabular-nums; }
-th,td { padding:.65rem .75rem; text-align:left; border-bottom:1px solid var(--line); }
-th { background:#e1eade; }
-tr:last-child td { border-bottom:0; }
-details { padding:.65rem 1rem; border:1px solid var(--line); border-radius:.5rem; }
-summary { cursor:pointer; font-weight:650; color:var(--accent); }
-#appendix-search { margin-top:.8rem; }
-#appendix-search label { display:block; font-size:.95rem; }
-input { display:block; max-width:100%; font:inherit; color:var(--ink); padding:.3rem .55rem; background:white; border:1px solid #748577; border-radius:.25rem; }
-#appendix-status { font-size:.9rem; color:var(--muted); }
-[hidden] { display:none !important; }
-footer { border-top:1px solid var(--line); text-align:center; padding:1rem; }
-@media (max-width:40rem) {
-  main,.masthead-inner { width:calc(100% - 2rem); }
-  .masthead-inner { padding-top:1.4rem; }
-  body { font-size:1rem; }
-  h2 { margin-top:2.2rem; }
+* { box-sizing: border-box; }
+html { scroll-padding-top: 1.2rem; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 1.025rem/1.82 "Source Sans 3", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+a { color: var(--accent); text-underline-offset: .23em; text-decoration-thickness: .075em; }
+a:hover { text-decoration-thickness: .13em; }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+p { margin: .55rem 0 1.05rem; }
+.wrap { width: min(73rem, calc(100% - 4.5rem)); margin-inline: auto; }
+.skip { position: absolute; left: 1rem; top: 1rem; z-index: 4; padding: .35rem .65rem; background: var(--paper); transform: translateY(-220%); }
+.skip:focus { transform: translateY(0); }
+
+.masthead { background: var(--dark); color: var(--hero-text); border-bottom: 4px solid #688674; }
+.site-nav { min-height: 4.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid #3c5449; font-size: .94rem; }
+.site-nav a { color: var(--hero-soft); text-decoration: none; }
+.site-nav a:hover { text-decoration: underline; }
+.site-nav a:first-child { color: var(--hero-text); font-weight: 650; }
+.hero { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(19.5rem, 1fr); gap: clamp(1.8rem, 5.1vw, 5rem); padding: clamp(2.05rem, 5vw, 4.25rem) 0 clamp(2.2rem, 5vw, 3.8rem); align-items: center; }
+.issue-label { margin: 0 0 .85rem; color: var(--gold); font-size: .9rem; font-weight: 700; letter-spacing: .06em; }
+h1 { margin: 0; max-width: 15ch; font: 750 clamp(2.3rem, 5.2vw, 4.6rem)/1.13 "Inter", "PingFang SC", sans-serif; letter-spacing: -.04em; text-wrap: balance; }
+.deck { color: var(--hero-text); font-size: clamp(1rem, 2.1vw, 1.27rem); line-height: 1.65; margin: 1.05rem 0 .62rem; }
+.window { color: var(--hero-soft); font-size: .9rem; line-height: 1.65; max-width: 35rem; }
+.window p { margin: 0; }
+.start { display: inline-flex; gap: .6rem; align-items: center; margin-top: 1.35rem; color: var(--gold); font-weight: 650; }
+
+.study { padding: clamp(1.1rem, 2.5vw, 1.65rem); background: #1b382d; border: 1px solid #4a6959; border-radius: .85rem; }
+.study h2 { margin: 0 0 .25rem; color: var(--hero-text); border: none; padding: 0; font-size: 1.17rem; line-height: 1.38; }
+.study p { margin: 0; }
+.study-context { color: var(--hero-soft); font-size: .9rem; }
+.metrics { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; border-block: 1px solid #4a6959; margin: .9rem 0 .68rem; }
+.metric { padding: .72rem .65rem .72rem 0; }
+.metric + .metric { border-left: 1px solid #4a6959; padding: .72rem 0 .72rem .85rem; }
+.metric-name { color: var(--hero-text); font-weight: 700; }
+.metric strong { display: block; color: var(--gold); font: 700 clamp(1.8rem, 4vw, 2.75rem)/1.15 "Inter", system-ui, sans-serif; letter-spacing: -.055em; font-variant-numeric: tabular-nums; margin: .13rem 0; }
+.metric-side { color: var(--hero-soft); font-size: .87rem; }
+.study-note { color: var(--hero-soft); font-size: .8rem; line-height: 1.55; }
+.study-note a { color: var(--hero-text); white-space: nowrap; margin-inline-start: .27em; }
+
+.layout { display: grid; grid-template-columns: minmax(10rem, 12.3rem) minmax(0, 1fr); align-items: start; gap: clamp(2.6rem, 6vw, 5.1rem); padding: clamp(2rem, 4.45vw, 3.4rem) 0 4.5rem; }
+.contents { position: sticky; top: 1.5rem; border-right: 1px solid var(--line); padding: .1rem 1.1rem 0 0; align-self: start; }
+.contents p { margin: 0 0 .55rem; font-size: .91rem; color: var(--muted); font-weight: 650; }
+.contents ul { margin: 0; list-style: none; padding: 0; }
+.contents a { display: block; border-left: 2px solid transparent; border-radius: 0 .3rem .3rem 0; color: var(--muted); padding: .37rem .55rem; font-size: .93rem; text-decoration: none; line-height: 1.45; }
+.contents a:hover, .contents a[aria-current] { background: #e8eee5; color: var(--accent); border-color: #568871; }
+.contents a[aria-current] { font-weight: 650; }
+.article { min-width: 0; max-width: 52rem; overflow-wrap: anywhere; }
+.article h2 { margin: 3.1rem 0 .95rem; padding-top: .95rem; border-top: 1px solid var(--line); font-size: clamp(1.5rem, 3.2vw, 2rem); line-height: 1.35; letter-spacing: -.015em; }
+.article h3 { margin: 1.85rem 0 .42rem; color: #233d32; font-size: clamp(1.15rem, 2.5vw, 1.45rem); line-height: 1.46; }
+.article h3 + p > em:only-child { display: block; margin: -.15rem 0 .3rem; color: var(--muted); font-style: normal; font-size: .94rem; line-height: 1.6; }
+.article li + li { margin-top: .6rem; }
+.article ul { padding-inline-start: 1.4rem; }
+.article strong { color: #1c503b; }
+.edition-summary > h2 { border: 0; padding: 0; margin: 0 0 1.2rem; }
+.summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.summary-card { min-width: 0; padding: clamp(.95rem, 2vw, 1.35rem); background: var(--panel); border: 1px solid var(--line); border-top: 3px solid #8aa795; border-radius: .68rem; font-size: .96rem; line-height: 1.73; }
+.summary-card.opening { grid-column: 1 / -1; padding: clamp(1.12rem, 2.7vw, 1.7rem); background: #e8eee4; border-color: #b8cbb6; border-top-color: #4b8063; font-size: 1rem; }
+.summary-card h3 { margin: 0 0 .62rem; font-size: 1.13rem; }
+.summary-card.opening h3 { font-size: clamp(1.2rem, 3vw, 1.55rem); }
+.summary-card p { margin: .65rem 0 0; }
+code { padding: .08em .23em; border-radius: .2em; color: #184734; background: #e9eee6; font: .9em "IBM Plex Mono", SFMono-Regular, ui-monospace, monospace; }
+.table-hint { display: none; }
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: .62rem; margin: 1.4rem 0; background: var(--panel); }
+table { border-collapse: collapse; width: 100%; min-width: 35rem; font-size: .91rem; line-height: 1.58; font-variant-numeric: tabular-nums; }
+th, td { padding: .62rem .78rem; border-bottom: 1px solid var(--line); text-align: left; }
+th { background: #e6ede1; color: #1e4634; font-weight: 700; }
+tr:last-child td { border-bottom: none; }
+details { padding: .8rem 1.05rem; border: 1px solid var(--line); background: var(--panel); border-radius: .65rem; }
+summary { cursor: pointer; color: var(--accent); font-weight: 650; }
+#appendix-search { margin-top: .9rem; }
+#appendix-search label { display: block; font-size: .94rem; }
+input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; color: var(--ink); background: white; border: 1px solid #74877a; border-radius: .3rem; }
+#appendix-status { margin: .38rem 0 0; color: var(--muted); font-size: .89rem; }
+[hidden] { display: none !important; }
+.footer { border-top: 1px solid var(--line); padding: 1.2rem 0 1.6rem; color: var(--muted); font-size: .9rem; }
+.footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .55rem 1.5rem; }
+
+@media (max-width: 59rem) {
+  .wrap { width: calc(100% - 3rem); }
+  .hero { grid-template-columns: minmax(0, 1.28fr) minmax(16rem, 1fr); gap: 1.8rem; }
+  .layout { display: block; }
+  .contents { position: static; border-right: 0; border-bottom: 1px solid var(--line); margin-bottom: 1.8rem; padding: 0 0 .75rem; }
+  .contents ul { display: flex; flex-wrap: wrap; gap: .25rem .35rem; }
+  .article { margin: auto; }
+}
+@media (max-width: 41rem) {
+  .wrap { width: calc(100% - 2rem); }
+  .site-nav { min-height: 3.4rem; }
+  .hero { grid-template-columns: minmax(0, 1fr); gap: 1.65rem; }
+  .window { line-height: 1.62; }
+  .summary-grid { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
+  .table-hint { display: block; color: var(--muted); font-size: .85rem; margin: 1rem 0 .15rem; }
+  .table-scroll { margin-top: .2rem; }
+  .article h2 { margin-top: 2.35rem; }
+  .edition-summary > h2 { margin-top: 0; }
+}
+@media print {
+  .masthead { background: white; color: black; }
+  .masthead * { color: black !important; }
+  .site-nav, .start, .contents, .footer, #appendix-search { display: none; }
+  .hero, .layout { display: block; }
+  .study, .summary-card { background: white !important; break-inside: avoid; }
+  .study { margin-top: 1rem; }
+  .article { max-width: none; }
+  .table-scroll { overflow: visible; }
+  table { min-width: 0; }
 }
 </style>
   <meta name="vector-weekly-date" content="2026-11-17">
   <meta name="vector-weekly-issue" content="001">
-  <meta name="vector-weekly-summary" content="富士通对照 RVV 与 CGRA 的非线性算子开销，香山修复向量状态恢复并共享 ROB 入队选择。">
+  <meta name="vector-weekly-summary" content="同一套矩阵引擎之后，非线性算子仍是瓶颈。富士通用 RTL 仿真发现，CGRA 在 SiLU 内核最高快 7.12×，RVV 在需要归约的 Softmax 内核最高快 9.8×。设计取舍可以分开量逐元素运算、归约同步和数据搬运。本期也拆解香山向量状态恢复、Apple 混合内存序与仿真采样偏差。">
   <meta name="vector-weekly-kind" content="pilot">
 </head>
 <body>
 <a class="skip" href="#article">跳到正文</a>
 <header class="masthead">
-  <div class="masthead-inner">
-    <nav aria-label="站点导航"><a href="/">羟基太白</a><a href="/weekly/">往期周报</a></nav>
-    <h1>处理器架构与矢量设计周报</h1>
-    <div class="issue"><p><strong>第 001 期 · 试刊号 · 2026 年 11 月 17 日</strong></p>
-<p>覆盖窗口为北京时间 2026-11-10 21:57 至 2026-11-17 21:57，包含起点。检索于 11 月 17 日晚启动。本期为系列第 001 期，按试刊窗口出刊。</p></div>
+  <nav class="wrap site-nav" aria-label="站点导航"><a href="/">羟基太白</a><a href="/weekly/">往期周报 ↗</a></nav>
+  <div class="wrap hero">
+    <div>
+      <p class="issue-label">第 001 期 · 试刊号 · 2026 年 11 月 17 日</p>
+      <h1>处理器架构<wbr>与矢量设计周报</h1>
+      <p class="deck">同一套矩阵引擎，为什么 SiLU 和 Softmax 的赢家相反？</p>
+      <div class="window"><p>覆盖窗口为北京时间 2026-11-10 21:57 至 2026-11-17 21:57，包含起点。检索于 11 月 17 日晚启动。本期为系列第 001 期，按试刊窗口出刊。</p></div>
+      <a class="start" href="#本期摘要">阅读本期摘要 <span aria-hidden="true">↓</span></a>
+    </div>
+    <aside class="study" aria-labelledby="study-title">
+      <h2 id="study-title">富士通 RVV 与 CGRA 对照</h2>
+      <p class="study-context">两套方案共用 Rocket 核心和 Gemmini 矩阵引擎。</p>
+      <div class="metrics">
+        <div class="metric"><p class="metric-name">SiLU</p><strong>7.12×</strong><p class="metric-side">CGRA 相对 RVV</p></div>
+        <div class="metric"><p class="metric-name">Softmax</p><strong>9.8×</strong><p class="metric-side">RVV 相对 CGRA</p></div>
+      </div>
+      <p class="study-note">RTL 仿真周期数的内核加速比，各取本负载测试中的最大值。<a href="#矢量与矩阵">看实验条件</a></p>
+    </aside>
   </div>
 </header>
-<main>
-  <nav class="toc" aria-label="本期目录"><p>本期目录</p><ul>
-<li><a href="#本期重点">本期重点</a></li>
+<main class="wrap layout">
+  <nav class="contents" aria-label="本期目录"><p>本期目录</p><ul>
+<li><a href="#本期摘要">本期摘要</a></li>
 <li><a href="#矢量与矩阵">矢量与矩阵</a></li>
 <li><a href="#通用处理器架构">通用处理器架构</a></li>
 <li><a href="#开源项目与规范">开源项目与规范</a></li>
@@ -88,18 +166,22 @@ footer { border-top:1px solid var(--line); text-align:center; padding:1rem; }
 <li><a href="#厂商公开动态">厂商公开动态</a></li>
 </ul>
 </nav>
-  <article class="article" id="article"><h2 id="本期重点">本期重点</h2>
-<ul>
-<li><strong>同一套矩阵乘，非线性层仍有两种瓶颈。</strong> 富士通用相同的矩阵引擎比较 RVV 与粗粒度可重构阵列，SiLU 青睐流水数据流，Softmax 更依赖归约和片间交接。</li>
-<li><strong>向量恢复要等配置和异常状态同时可见。</strong> 香山昆明湖 v2 修复一次 <code>vsetvl</code> 刷新后译码早恢复一拍的问题；v3 的另一项改动则在 ROB bank 内共享入队选择器。</li>
-<li><strong>内存模型实测与仿真取样各有盲区。</strong> M1、M2 的混合 Arm/TSO 测试说明了可观测的顺序边界，SPEC CPU2026 评估则展示了阶段取样如何掩盖真实 CPI。</li>
-</ul>
+  <article class="article" id="article"><div class="edition-summary"><h2 id="本期摘要">本期摘要</h2>
+<div class="summary-grid"><section class="summary-card opening"><h3 id="非线性算子该交给向量核还是空间阵列">非线性算子该交给向量核还是空间阵列？</h3>
+<p>矩阵乘已有专用加速器，注意力和激活函数却仍可能占去大量周期。富士通保留同一个 Rocket CPU、内存层级和 Gemmini 矩阵乘引擎，只替换处理非线性算子的单元。SiLU 的每个元素可以独立计算，CGRA 将运算串成流水，内核最高比 RVV 快 <strong>7.12×</strong>。Softmax 要等整行归约才能归一化，这套 CGRA 还需分块搬运和重启，RVV 的内核最高比它快 <strong>9.8×</strong>。两项均按 RTL 仿真周期数计算，属于各自测试规模的最大值。</p>
+<p>选型时先拆出逐元素运算、归约同步和数据搬运三项开销。测同一个模型时，还要同时看整块耗时，避免把某个内核的倍率写成整个模型的收益。<a href="https://arxiv.org/html/2611.12435v1">富士通实验与结果</a></p></section><section class="summary-card"><h3 id="香山如何处理向量状态晚到和-rob-入队逻辑重复">香山如何处理向量状态晚到和 ROB 入队逻辑重复？</h3>
+<p>昆明湖 v2 的 <code>vsetvl</code> 触发刷新后，进译码的 <code>vtype</code> 比提交到 CSR 的 <code>vstart</code> 早到一拍。若沿原时点恢复，接下来的向量指令可能看到旧的恢复位置。补丁把译码恢复往后移一拍。昆明湖 v3 的另一项改动针对面积，将每个 ROB 项重复做的头 µop 数据选择上移到 bank 共享，逐项写使能仍各自保留；公开补丁未量化面积和时序。</p>
+<p>回归可逐拍检查刷新、CSR 更新以及第一条新指令的译码时刻。对共享选择器，则可在满足 bank 数和重命名宽度约束后，将逻辑面积、共享扇出和关键路径分开量。<a href="https://github.com/OpenXiangShan/XiangShan/commit/c95fe3f48312410138f5a48bfec55cb9cf26da8a">v2 恢复补丁</a> · <a href="https://github.com/OpenXiangShan/XiangShan/commit/3614486179322ff060a532608b1e8341e9a929b0">v3 ROB 补丁</a></p></section><section class="summary-card"><h3 id="arm-与-tso-线程共享内存时应该验证什么">Arm 与 TSO 线程共享内存时，应该验证什么？</h3>
+<p>Apple M 系列允许两种内存序的线程共享同一片内存，单独验证两个模式仍解释不了混合程序。犹他大学的研究先写出复合模型，再用能区分顺序规则的短程序，在运行 Linux 的 M1 和 M2 上分别执行 <strong>936 项</strong>测试。每项在每台机器上重复 <strong>6 亿次</strong>，混合子集中 <strong>348 个</strong>由模型禁止的目标结果都未观测到；测试也发现极低概率的允许结果可能需要更长时间才出现。</p>
+<p>可借鉴的是用同一批测试分别检查同模式与跨模式行为，并设置预期允许结果作为对照。观察不到某结果时，应保留测试覆盖与运行时长的边界。<a href="https://arxiv.org/html/2611.21406v1">模型与实测</a></p></section><section class="summary-card"><h3 id="仿真为什么可能选中了正确阶段却算错了性能">仿真为什么可能选中了正确阶段，却算错了性能？</h3>
+<p>全程模拟很慢，SimPoint 用少量代表区间近似整段程序。研究团队先在 x86 实机上对 <strong>90 个</strong> SPECrate 输入取计数器，再将区间估计与全程 CPI 对比。某些非平稳输入的误差达到 <strong>43%</strong>；保留原聚类、用已测 CPI 重新选代表区间后，实验中各输入误差均降至 <strong>2.6%</strong> 以内。这把问题定位到代表区间的选择。新设计通常还没有实机 CPI，可先交叉比较多个选点和随机种子，并为低频、高代价阶段单列结果。<a href="https://arxiv.org/html/2611.16376v1">采样实验</a></p></section><section class="summary-card"><h3 id="矩阵和向量单元之间哪里可以少搬一次数据">矩阵和向量单元之间，哪里可以少搬一次数据？</h3>
+<p>两份美国专利申请分别从运算阵列和寄存器布局入手。AMD 让阵列单元的结果寄存器接回输入选择器，使中间值可在同一阵列里进入下一阶段。Qualcomm 让矩阵单元直接消费按行或列排列的通用寄存器，并可按同类布局写回，让后继向量指令读取。两份申请都未给出可核验的性能收益。若评估类似设计，可从一条「矩阵乘、激活、再消费」的链路出发，逐段计数写回、重读和重排，再和新增的端口、选择器及时序代价比较。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359386">AMD 公开申请</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359928">Qualcomm 公开申请</a></p></section></div></div>
 <h2 id="矢量与矩阵">矢量与矩阵</h2>
 <h3 id="simd-还是-cgra面向-ai-非线性函数的-rvv-与-cgra-soc-对照">SIMD 还是 CGRA？面向 AI 非线性函数的 RVV 与 CGRA SoC 对照</h3>
 <p><em>To SIMD or Not to SIMD: Comparing RVV vs. CGRA SoCs for Non-Linear Functions in AI</em></p>
 <p>Sameer Deshmukh、Naoya Mizuki、Takumi Honda（富士通）。arXiv:2611.12435 v1 在窗口前提交，纳入本期的是 SC26 H2RC 工作坊安排在北京时间 11 月 16 日 23:30 的报告。<a href="https://sc26.conference-program.com/presentation/?id=ws_h2rc103&amp;sess=sess139">会议议程</a> · <a href="https://arxiv.org/abs/2611.12435">预印本及 PDF</a> · <a href="https://arxiv.org/html/2611.12435v1">全文</a></p>
 <p>作者固定 Rocket 单核和 4×4 FP32 Gemmini 矩阵引擎，在 RTL 周期仿真里对照 Saturn RVV 与 4×4 PE 的弹性 RIKEN CGRA。连续逐元素执行的 SiLU 容易映射成阵列流水；Softmax 却需要先归约，再拿归约结果做归一化。这套 CGRA 实现还把求最大值和倒数留在 Rocket 上，阵列按暂存块重启两遍。长度 128 的行里，仿真记录的阵列 RUN 阶段为 40.62 周期/元素，含了重复送操作数和流水重启等代价。这个数只对应 RUN 阶段。<a href="https://arxiv.org/html/2611.12435v1">实验与代价分解，表 IV–V</a></p>
-<div class="table-scroll" tabindex="0" role="region" aria-label="RVV 与 CGRA 周期仿真对照"><table>
+<p class="table-hint">左右滑动查看完整表格</p><div class="table-scroll" tabindex="0" role="region" aria-label="RVV 与 CGRA 周期仿真对照"><table>
 <thead>
 <tr>
 <th>负载</th>
@@ -127,6 +209,7 @@ footer { border-top:1px solid var(--line); text-align:center; padding:1rem; }
 <h3 id="fp32-输入下-simd-数学库的函数级精度与性能评估">FP32 输入下 SIMD 数学库的函数级精度与性能评估</h3>
 <p><em>Evaluating Function-Level Accuracy and Performance of SIMD Math Libraries with FP32 Inputs</em></p>
 <p>Xingjian Qi、Robert Strzodka（海德堡大学），SC26 Correctness 工作坊，北京时间 11 月 17 日 00:45。作者用 256 位 MPFR 作高精度参照，穷举有限 binary32 编码，比对 AOCL-LibM、GNU libmvec、SLEEF 和 Intel SVML 的单输入 AVX2 数学函数。会议摘要指出，便宜的 SIMD 路径一般跑得快，触发昂贵修正的输入会改变与标量函数的速度排序。微基准可分开打常见输入、边界输入和混合向量，再记录触发慢路径的频率。这里以公开摘要和作者项目页为依据。<a href="https://sc26.conference-program.com/presentation/?id=ws_corr108&amp;sess=sess134">会议摘要</a> · <a href="https://asc.ziti.uni-heidelberg.de/projects/2026-PNRFC/">作者项目与代码入口</a></p>
+
 <h2 id="通用处理器架构">通用处理器架构</h2>
 <h3 id="apple-m-系列处理器是否满足-arm-与-tso-的复合内存模型">Apple M 系列处理器是否满足 Arm 与 TSO 的复合内存模型？</h3>
 <p><em>Do Apple M-Series Processors Enforce the Compound Memory Model? Sequential and Parallel Composition of Arm and TSO</em></p>
@@ -134,6 +217,7 @@ footer { border-top:1px solid var(--line); text-align:center; padding:1rem; }
 <h3 id="显微镜下的-spec-cpu2026程序阶段与采样">显微镜下的 SPEC CPU2026：程序、阶段与采样</h3>
 <p><em>SPEC CPU2026 Under the Microscope: Programs, Phases, and Samples</em></p>
 <p>Peijun Li、Tianming Cui、Caiwen Ding、Yang Katie Zhao（明尼苏达大学双城分校），Pei-Hung Lin、Maya Gokhale（劳伦斯利弗莫尔国家实验室）。arXiv:2611.16376 v1，北京时间 11 月 12 日提交。作者对 90 个 SPECrate 输入按 10 毫秒采集 x86 实机计数器，并用全程结果评估取样。非平稳输入中，SimPoint 的个别误差达到 43%；论文用已测得的分段 CPI 做后验选点，展示了误差可降到约 2.6% 的诊断结果。验证预取器或 ROB 扩容收益时，可先按输入划分长期阶段，再检查选点、权重和暖机是否覆盖低频但高代价的阶段。后验选点依赖全程实测 CPI，新微架构仍需独立校验。<a href="https://arxiv.org/html/2611.16376v1">全文、署名与实验表</a></p>
+
 <h2 id="开源项目与规范">开源项目与规范</h2>
 <h3 id="香山等-vstart-可见后再恢复译码">香山：等 <code>vstart</code> 可见后再恢复译码</h3>
 <p>11 月 17 日合入昆明湖 v2。恢复路径上的 <code>vtype</code> 和 <code>vstart</code> 原本不在同一拍可见，后者还要经过 CSR 提交路径上的寄存器。补丁把 <code>vsetvl</code> 触发刷新后的译码恢复往后延一拍。回归可对照三个点：刷新发生、<code>vstart</code> 更新、第一条新向量指令被译码，并在重定向连续到达时检查旧状态是否泄漏。固定提交支持时序核对，公开资料没有给出吞吐影响。<a href="https://github.com/OpenXiangShan/XiangShan/commit/c95fe3f48312410138f5a48bfec55cb9cf26da8a">香山 PR #6983 的合入提交</a></p>
@@ -146,11 +230,13 @@ footer { border-top:1px solid var(--line); text-align:center; padding:1rem; }
 <li><strong>Zama16b。</strong> 11 月 14 日合入 ISA 手册主干的改动将 MAG16 的要求对齐到同时可缓存且一致的主存。向量访存仍不在该 PMA 的原子性保证内。核对一致性或内存类型的测试用例时，应记录目标地址的属性。<a href="https://github.com/riscv/riscv-isa-manual/commit/21ee747cb7c0815a5f60daee3d13b83c9a468517">RISC-V ISA 手册提交</a></li>
 <li><strong>GCC RVV。</strong> 11 月 11 日进入 GCC 主干的 <code>r17-6133</code> 为 <code>vwadd[u].wv</code> 补上混宽源操作数的寄存器约束。该指令的 <code>vs2</code> 为 2×SEW，<code>vs1</code> 为 SEW；分配时要尊重双方占用的寄存器组。证据为上游差分与测试，适用范围是这条编译器主干修复。<a href="https://gnu.googlesource.com/gcc/+/2e046596d270a5c61b8a02e18e69211a04453d16">GCC 提交与补丁</a></li>
 </ul>
+
 <h2 id="专利">专利</h2>
 <h3 id="amd重用阵列做矩阵与向量乘积">AMD：重用阵列做矩阵与向量乘积</h3>
 <p><strong>US20260359386A1，Matrix Engine with Matrix and Vector Products。</strong> 申请人为 Advanced Micro Devices, Inc.，主张 2025-03-13 的美国临时申请优先权，2026-11-12 公开。权利要求 1–4 让指令控制行列输入选择，并允许单元结果寄存器回送到输入选择器；权利要求 6–9 覆盖随输入序列改变的操作。一个解释性例子是前一阶段的累积值进入结果寄存器，下一指令选择反馈作为一部分输入，其余值继续从行列入口进入。设计时可比较反馈增加的端口和时序代价，是否抵得过外部写回与再次读取的成本。公开申请的权利要求提供方案边界，未给出已实现产品或性能指标。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359386">USPTO 原件，权利要求第 16–17 页</a></p>
 <h3 id="qualcomm矩阵单元直接消费线性寄存器布局">Qualcomm：矩阵单元直接消费线性寄存器布局</h3>
 <p><strong>US20260359928A1，Techniques for Supporting Different Register Layouts in Graphics Processing Units (GPUs)。</strong> 申请人为 Qualcomm Incorporated，首页所示美国申请日为 2025-05-12，未列另行优先权，2026-11-12 公开。权利要求 1–3 允许按行或按列把矩阵放入通用寄存器，矩阵单元直接消费这种布局；权利要求 4–8 涉及编译选择和给后继向量指令的线性写回。例如，如果 GEMM 后马上做逐行激活，可让结果按行写回，给向量指令直接读取。这个例子用于解释数据流；是否获益取决于矩阵输入组织、访问端口和布局转换成本。本文只依据公开申请披露。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359928">USPTO 原件，权利要求第 21–22 页</a></p>
+
 <h2 id="ai-工程实践">AI 工程实践</h2>
 <h3 id="办公把两版公开材料整理成有出处的差异表">办公：把两版公开材料整理成有出处的差异表</h3>
 <p>给 AI 一页自构造的接口示意图和一张参数表，指定输出字段为「项目、两个值、各自页码或单元格、状态、人工判断」。要求模型逐条读取图和表，照录单位，无法定位时标「待核」。工程师抽查图注、合并单元格和单位换算，再确认哪些差异需要提交变更。这个流程是对 Google DeepMind 与 Artificial Analysis 的 MKA 多文件、多模态评估设计的本期迁移，未对具体模型做测评。<a href="https://blog.google/innovation-and-ai/models-and-research/gemini-models/multimodal-knowledge-agent-benchmark/">MKA 评估设计与公开样例入口</a></p>
@@ -158,8 +244,10 @@ footer { border-top:1px solid var(--line); text-align:center; padding:1rem; }
 <p>以会议展示的 AccelClosure 为例，输入 RTL、时序路径和功能测试结果，请 AI 提出一个局部改动以及对应的验收用例。公开案例用 Verilator 核对功能，Yosys 综合，OpenROAD 检验物理时序和面积。作者在 Sky130HD 的 8×8、signed INT8 权重驻留阵列上以 200 MHz 为目标，报告初始 setup slack −2.19 ns，以及布局布线后估计的最高频率 212 MHz。工程师需复核时钟约束并重复跑回归；例如 <code>valid=1, ready=0</code> 时下一拍仍应保持 <code>valid</code> 和 <code>payload</code>，并分别测试 reset、flush 的既定契约。频率是会议摘要中的估计，本文未复跑 EDA 流程。<a href="https://riscv.or.jp/en/risc-v-day-tokyo-2026-autumn-2/">东京 RISC-V Day 官方摘要</a></p>
 <h3 id="处理器架构比较两种向量写回组织">处理器架构：比较两种向量写回组织</h3>
 <p>给 AI 两组输入：同一组 64 位结果分条，以及两个 VRF bank、每 bank 每拍一写的约束。让 AI 输出逐拍授权、等待和分支清除后剩余队列；人工检查 scoreboard 唤醒和写回顺序。用自构造的待写序列 <code>B0:A, B0:B, B1:C, B1:D</code> 校核：只看队首连续项的共享 FIFO 需要 3 拍，允许两 bank 各自仲裁且已预装队列时需要 2 拍。这里用手算和简短队列模型复核，省略了写回总线、仲裁时序和预测失败带来的真实开销。实际选型前还需固定 VLEN、分条宽度、队列容量和每拍入队能力，再按不同 bank 冲突率比较。该案例借鉴了公开 ROB bank 复用讨论中的配置约束，测试对象为自构造的写回队列。<a href="https://github.com/OpenXiangShan/XiangShan/pull/6930">香山公开讨论</a></p>
+
 <h2 id="来源与局限">来源与局限</h2>
 <p>正文采用 SC26 与东京 RISC-V Day 公开日程、arXiv 原文、开源固定提交、USPTO A1 原件和厂商公告。会议议程及摘要支持报告内容和安排，独立复现仍取决于作者公开的原始数据和代码。开源条目按合入时间，专利按公开日期；美国公布日晚于北京时间的条目需额外核对。试刊覆盖已验证的选题，专利证据集中在 11 月 12 日 USPTO 申请公开。全球同族、当周授权和其他地区的覆盖有限。文中涉及硅片实测、RTL 周期仿真、布局布线估计及厂商峰值时均按来源口径表述。</p>
+
 <h2 id="线索附录">线索附录</h2>
 <details>
 <summary>展开补充线索</summary>
@@ -175,13 +263,14 @@ footer { border-top:1px solid var(--line); text-align:center; padding:1rem; }
 <li><strong>QEMU 矢量点积 RFC。</strong> 初版在实验窗口前；11 月 10 日 22:12 的邮件提供浮点转换交叉验证反馈，未给出测试规模，仍为 RFC 讨论。<a href="https://lore-kernel.gnuweeb.org/qemu-devel/20261110141239.46244-1-chao.liu@processmission.com/T/#u">公开邮件原文镜像</a></li>
 </ul>
 </details>
+
 <h2 id="厂商公开动态">厂商公开动态</h2>
 <ul>
 <li><strong>NVIDIA 在 SC26 推出 Vera CPU 机架方案。</strong> 11 月 16 日介绍的整机由 192 颗 Vera CPU 和 Quantum-X800 InfiniBand 组成；厂商给出的超过 200 TB/s 是机架聚合峰值内存带宽。气候或分子模拟移植评估还需拆开每节点带宽、NUMA、跨节点通信和应用实际访存。<a href="https://investor.nvidia.com/news/press-release-details/2026/NVIDIA-Expands-Vera-CPU-Platform-to-Accelerate-Scientific-Discovery/default.aspx">NVIDIA 公告</a></li>
 <li><strong>AMD 在 SC26 展示原生与模拟 FP64 的适用差异。</strong> 11 月 16 日的公告称分析了 11 个应用或基准中的 47 种负载配置；能否替换原生双精度取决于应用与数值条件。矩阵核移植时，可分别验算误差、回退比例和最终端到端时间。这里采用厂商公开的范围与结论。<a href="https://newsroom.amd.com/news/sc26-amd-expands-frontier-scientific-computing/">AMD SC26 公告</a></li>
 </ul></article>
 </main>
-<footer><a href="/weekly/">返回周报归档</a></footer>
+<footer class="footer"><div class="wrap"><span>处理器架构与矢量设计周报</span><a href="/weekly/">返回周报归档 ↑</a></div></footer>
 <script>
   const search = document.getElementById('appendix-search');
   const query = document.getElementById('appendix-query');
@@ -197,6 +286,29 @@ footer { border-top:1px solid var(--line); text-align:center; padding:1rem; }
     }
     status.textContent = term ? '找到 ' + shown + ' 条' : '';
   });
+
+  const links = Array.from(document.querySelectorAll('.contents a'));
+  const sections = links.map(link => document.getElementById(decodeURIComponent(link.hash.slice(1))));
+  function highlightSection() {
+    let active = 0;
+    for (let index = 0; index < sections.length; index += 1) {
+      if (sections[index].getBoundingClientRect().top <= 135) active = index;
+    }
+    for (const [index, link] of links.entries()) {
+      if (index === active) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    }
+  }
+  let scheduled = false;
+  window.addEventListener('scroll', () => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      highlightSection();
+      scheduled = false;
+    });
+  }, { passive: true });
+  highlightSection();
 </script>
 </body>
 </html>
