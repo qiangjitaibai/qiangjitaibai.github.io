@@ -94,6 +94,17 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 .source-figure figcaption { color: var(--muted); font-size: .89rem; margin: .6rem .22rem 0; line-height: 1.64; }
 .source-figure figcaption p { margin: 0; }
 .chart-figure { max-width: 41rem; margin: 1rem 0 1.5rem; }
+.litmus-figure { margin: 1.2rem 0 1.45rem; padding: .7rem .85rem .85rem; scroll-margin-top: 1.25rem; }
+.litmus-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.litmus-panel { width: 100%; min-width: 0; table-layout: fixed; }
+.litmus-panel caption { padding: .5rem .15rem .35rem; color: #233d32; font-weight: 740; text-align: left; }
+.litmus-panel th { padding: .42rem .58rem; }
+.litmus-panel td { padding: .48rem .58rem; }
+.litmus-panel th.arm { background: #e3edf4; color: #284b63; }
+.litmus-panel th.tso { background: #f3ead9; color: #5a4324; }
+.litmus-panel code { padding: 0; background: transparent; color: var(--ink); white-space: nowrap; }
+.litmus-outcome { background: #edf1e8; }
+.litmus-figure figcaption { margin-top: .85rem; padding-top: .65rem; border-top: 1px solid var(--line); }
 .article blockquote { margin: 1rem 0; padding: .7rem 1rem; background: #e8eee4; border-left: 3px solid #679078; color: #2c4739; border-radius: 0 .45rem .45rem 0; }
 .article blockquote p { margin: .1rem 0; }
 
@@ -108,7 +119,8 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
   .wrap { width: calc(100% - 2rem); }
   .site-nav { min-height: 3.4rem; }
   .window { line-height: 1.62; }
-  .figure-pair { grid-template-columns: minmax(0,1fr); }
+  .figure-pair, .litmus-pair { grid-template-columns: minmax(0,1fr); }
+  .litmus-figure { padding-inline: .65rem; }
   .table-hint { display: block; color: var(--muted); font-size: .85rem; margin: 1rem 0 .15rem; }
   .table-scroll { margin-top: .2rem; }
   .article h2 { margin-top: 2.35rem; }
@@ -268,17 +280,86 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 <p><em>Do Apple M-Series Processors Enforce the Compound Memory Model? Sequential and Parallel Composition of Arm and TSO</em></p>
 <p>Vijay Nagarajan（犹他大学），arXiv:2611.21406 v1，北京时间 11 月 17 日首次提交。</p>
 <p class="entry-text"><strong class="entry-label">问题</strong>　Apple M 系列上的 Arm 与 TSO 线程可以共享内存。真正要查的是一个模式的写入，能否按预期顺序被另一个模式读到。</p>
-<p class="entry-text"><strong class="entry-label">方法</strong>　看论文图 1(c)。Arm 线程先写数据，再用 release store 发布标志；TSO 线程先读标志，再读数据。两种模式各提供一段顺序，组合后禁止「看到标志已更新，数据还是旧值」这组结果。<a href="https://arxiv.org/html/2611.21406v1#S1.F1">原文图 1(c)</a></p>
-<p class="entry-text"><strong class="entry-label">结果</strong>　作者在 Linux 下的 M1 和 M2 各运行 936 项 litmus test，每项各重复 6 亿次。529 项混合测试中，模型禁止的 348 个目标结果均未观察到。证据范围是这两台机器和被测指令组合。</p>
+<p class="entry-text"><strong class="entry-label">方法</strong>　下图的 (c) 检查跨模式通信。Arm 线程先写数据 <code>x</code>，再用释放写入 <code>STLR</code> 发布标志 <code>y</code>。TSO 线程先读标志，再读数据。两边各约束一段顺序，合起来就禁止「看到新标志，却读到旧数据」。</p>
+<p>下图的 (d) 和 (e) 则检查同一线程内的写后读顺序。两条 TSO 线程各写一个地址，再用 <code>LDAR</code> 读对方写的地址。在 (d) 中，<code>STLR</code> 到 <code>LDAR</code> 要保持顺序，两边同时读到旧值被禁止。在 (e) 中，普通写入到 <code>LDAR</code> 没有这条约束，两边可以同时读到旧值。</p>
+<figure class="source-figure litmus-figure" id="apple-figure-1">
+<table class="litmus-panel">
+<caption>(c) Arm 发消息，TSO 接收</caption>
+<thead>
+<tr>
+<th class="arm" scope="col">线程 0 · Arm</th>
+<th class="tso" scope="col">线程 1 · TSO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STR x = 1</code></td>
+<td><code>LDR y → r1</code></td>
+</tr>
+<tr>
+<td><code>STLR y = 1</code></td>
+<td><code>LDR x → r2</code></td>
+</tr>
+<tr class="litmus-outcome">
+<td colspan="2"><strong>禁止</strong>　r1 = 1、r2 = 0（看到新标志却读到旧数据）</td>
+</tr>
+</tbody>
+</table>
+<div class="litmus-pair">
+<table class="litmus-panel">
+<caption>(d) 释放写入 + 获取加载</caption>
+<thead>
+<tr>
+<th class="tso" scope="col">线程 0 · TSO</th>
+<th class="tso" scope="col">线程 1 · TSO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STLR x = 1</code></td>
+<td><code>STLR y = 1</code></td>
+</tr>
+<tr>
+<td><code>LDAR y → r1</code></td>
+<td><code>LDAR x → r2</code></td>
+</tr>
+<tr class="litmus-outcome">
+<td colspan="2"><strong>禁止</strong>　r1 = r2 = 0</td>
+</tr>
+</tbody>
+</table>
+<table class="litmus-panel">
+<caption>(e) 普通写入 + 获取加载</caption>
+<thead>
+<tr>
+<th class="tso" scope="col">线程 0 · TSO</th>
+<th class="tso" scope="col">线程 1 · TSO</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STR x = 1</code></td>
+<td><code>STR y = 1</code></td>
+</tr>
+<tr>
+<td><code>LDAR y → r1</code></td>
+<td><code>LDAR x → r2</code></td>
+</tr>
+<tr class="litmus-outcome">
+<td colspan="2"><strong>允许</strong>　r1 = r2 = 0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<figcaption>
+<p><strong>原文图 1(c)–(e) · 初值 x = y = 0。</strong> 每列从上往下读是同一线程的指令顺序。对比 (d) 与 (e)，两条线程的读取都是 <code>LDAR</code>，唯一的指令差别是把释放写入 <code>STLR</code> 换成了普通写入 <code>STR</code>。图中列出的是作者提出的组合模型对目标结果的判定。改编自 Vijay Nagarajan 的图 1，重排并扩写了指令和判定。<a href="https://arxiv.org/html/2611.21406v1#S1.F1">原图与图注</a> · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p>
+</figcaption>
+</figure>
+<p class="entry-text"><strong class="entry-label">结果</strong>　作者在 Linux 下的 M1 和 M2 上各运行 936 项 litmus test，每项重复 6 亿次。529 项混合测试中，模型禁止的 348 个目标结果均未观察到。(d) 和 (e) 的实测在一条线程中用 <code>DMB</code> 替换图示的排序标注。两台机器都观察到了 (e) 的允许结果，均未观察到 (d) 的禁止结果。<a href="https://arxiv.org/html/2611.21406v1#S1.F1">图 1 的测试说明</a></p>
 <p class="entry-text reuse-note"><strong class="entry-label">可借鉴</strong>　做兼容模式回归时，为同一测试配两组结果：一组应被禁止，另一组通过调整一条排序条件后应当允许。<strong>先确认允许结果确实能出现</strong>，再解释禁止结果计数为零。</p>
 <details class="article-detail">
-<summary>看 Arm／TSO 的两类组合和对应测试</summary>
-<p>论文把问题分成两层。线程间，各线程保留自己模式规定的程序顺序，然后根据共同模型判断跨线程可见性。线程内，则检验 release、acquire 和屏障是否给 TSO 原本允许重排的写后读加上额外约束。<a href="https://arxiv.org/html/2611.21406v1">模型与实验方法</a></p>
-<blockquote>
-<p>“each thread keeps the preserved program order of its own model”<br />
-—— Vijay Nagarajan，<a href="https://arxiv.org/html/2611.21406v1">论文摘要</a></p>
-</blockquote>
-<p>图 1(d) 与 1(e) 是另一组辨别力更强的对照。两条 TSO 线程都先写一个地址、再用 acquire load 读另一地址，观察是否同时读到旧值。图示中改变写指令的 release 标注后，组合模型对同一结果的判断发生变化。实际测试的屏障替换见图注，作者在两台机器上都观察到 (e) 的允许结果，未观察到 (d) 的禁止结果。这组正、负例说明测试能把两个相近情形区分开，结论仍限于所测试的模式组合和变体。<a href="https://arxiv.org/html/2611.21406v1#S1.F1">原文图 1(d)–(e) 及图注</a></p>
+<summary>展开组合模型的两种排序约束</summary>
+<p>线程之间，各线程保留自身模式规定的程序顺序，再按共用的内存模型判断写入何时对另一条线程可见。线程内部，要检查 release、acquire 和屏障是否给 TSO 原本允许重排的写后读加上额外约束。实验支持 M1、M2 上的被测模式和指令组合。<a href="https://arxiv.org/html/2611.21406v1">论文的模型与实验方法</a></p>
 </details>
 <h3 id="显微镜下的-spec-cpu2026程序阶段与采样">显微镜下的 SPEC CPU2026：程序、阶段与采样</h3>
 <p><em>SPEC CPU2026 Under the Microscope: Programs, Phases, and Samples</em></p>
@@ -421,7 +502,7 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 </table></div>
 <p class="entry-text reuse-note"><strong class="entry-label">可借鉴</strong>　给微基准分别喂均匀流量和热点 bank 流量，固定入口带宽、VLEN 和深度。除了延迟分布，再查被分支清除的请求是否还能唤醒 scoreboard。<a href="https://github.com/OpenXiangShan/XiangShan/pull/6930">相关 bank 复用讨论</a></p>
 <h2 id="来源与局限">来源与局限</h2>
-<p>转载图来自 Deshmukh、Mizuki、Honda 的 <a href="https://arxiv.org/html/2611.12435v1">arXiv v1</a>，原文标注 © 2026 IEEE 和 <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>。图片仅转换格式，保留原图标注和数据，中文图注为本刊解读。正文采用 SC26 与东京 RISC-V Day 公开日程、arXiv 原文、开源固定提交、USPTO A1 原件、架构师访谈和厂商测试简报。会议议程及摘要支持报告内容和安排，独立复现仍取决于作者公开的原始数据和代码。开源条目按合入时间，专利按公开日期；美国公布日晚于北京时间的条目需额外核对。试刊覆盖已验证的选题，专利证据集中在 11 月 12 日 USPTO 申请公开。全球同族、当周授权和其他地区的覆盖有限。文中涉及硅片实测、RTL 周期仿真、布局布线估计及厂商峰值时均按来源口径表述。</p>
+<p>转载图来自 Deshmukh、Mizuki、Honda 的 <a href="https://arxiv.org/html/2611.12435v1">arXiv v1</a>，原文标注 © 2026 IEEE 和 <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>。富士通原图仅转换格式，中文图注为本刊解读。Apple M 系列内存模型图 1(c)–(e) 按 Vijay Nagarajan 的 <a href="https://arxiv.org/html/2611.21406v1#S1.F1">arXiv v1</a> 重排，采用原文的 <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a> 许可。正文采用 SC26 与东京 RISC-V Day 公开日程、arXiv 原文、开源固定提交、USPTO A1 原件、架构师访谈和厂商测试简报。会议议程及摘要支持报告内容和安排，独立复现仍取决于作者公开的原始数据和代码。开源条目按合入时间，专利按公开日期；美国公布日晚于北京时间的条目需额外核对。试刊覆盖已验证的选题，专利证据集中在 11 月 12 日 USPTO 申请公开。全球同族、当周授权和其他地区的覆盖有限。文中涉及硅片实测、RTL 周期仿真、布局布线估计及厂商峰值时均按来源口径表述。</p>
 <h2 id="线索附录">线索附录</h2>
 <details>
 <summary>展开补充线索</summary>
