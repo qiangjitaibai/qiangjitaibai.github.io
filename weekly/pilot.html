@@ -203,6 +203,8 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 <p><strong>原图 8 · Softmax 周期分解。</strong> ME-VE 是 Saturn RVV 方案，ME-RE 是 CGRA 方案。每组左柱为 RVV，右侧堆叠柱为 CGRA；右柱各色块显示阵列、CPU、控制与搬运的贡献。Deshmukh、Mizuki、Honda（富士通）。<a href="https://arxiv.org/html/2611.12435v1#S5.F8">看原图 8</a> · <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></p>
 </figcaption>
 </figure>
+<h4 id="控制变量后silu-的优势还在吗">控制变量后，SiLU 的优势还在吗？</h4>
+<p>一种解释是 RVV 要用软件算指数，而 CGRA 有流水化指数单元。作者在图 6 单独去掉 RVV 内核的指数计算，其余计算路径用于对照。在 N=16、32、64、128 四组中，省掉指数让原 RVV 激活阶段少用约 <strong>12.7%–13.2%</strong> 的周期，RVV 的每元素周期仍约为 CGRA 的 <strong>5.4–6.2 倍</strong>。这组实验能削弱「指数软件代价足以解释全部差距」的说法，支持继续查空间流水和逐组发射成本。作者用去掉指数的路径估计周期份额。完整 SiLU 的输出误差另见图 5。<a href="https://arxiv.org/html/2611.12435v1#S5.F6">作者消融实验、图 6</a> · <a href="https://arxiv.org/html/2611.12435v1#S5.SS1.SSS1">实验条件</a></p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　选型可以先拿同一行输入做三组对照：只测元素运算、加入归约依赖、最后加入真实搬运与控制。针对图 8 的热点，可以先试减少 CPU 往返或减少分块重启，比较每一项让总周期变化多少。最终报告要同时列内核、包含矩阵乘的整块时间，以及各自的输入长度。面积、功耗和频率需要另外核验。<a href="https://arxiv.org/html/2611.12435v1#S5">论文性能分解与结论</a></p>
 <h3 id="fp32-输入下-simd-数学库的函数级精度与性能评估">FP32 输入下 SIMD 数学库的函数级精度与性能评估</h3>
 <p><em>Evaluating Function-Level Accuracy and Performance of SIMD Math Libraries with FP32 Inputs</em></p>
@@ -210,6 +212,7 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 <p class="entry-text"><strong class="entry-label">问题</strong>　一个向量数学函数在常见输入上很快，遇到边界值时却可能进入补偿或特殊处理。只用随机数测平均吞吐，既容易漏掉最慢的一支，也可能漏掉超过库精度说明的输入。</p>
 <p class="entry-text"><strong class="entry-label">方法</strong>　作者比较 AOCL-LibM、GNU libmvec、SLEEF 和 Intel SVML 的单输入 AVX2 函数。精度测试遍历所有有限 binary32 编码，以 256 位 MPFR 算出的值作为参照。性能测试按输入触发的执行路径分组，再和对应标量函数比较。误差可用 ULP 表示，近似理解为在该数值量级上跨了几格可表示值。<a href="https://sc26.conference-program.com/presentation/?id=ws_corr108&amp;sess=sess134">会议方法和作者项目</a> · <a href="https://asc.ziti.uni-heidelberg.de/projects/2026-PNRFC/">代码入口</a></p>
 <p class="entry-text"><strong class="entry-label">结果</strong>　会议摘要报告，多数被测函数的误差比库给出的界限小，AOCL 和 SLEEF 有个别函数超出各自声明。便宜的 SIMD 路径快于相应标量调用，触发代价较高的修正时，速度排序可能反过来。公开摘要和项目材料提供分函数线索；这里未重跑完整穷举。</p>
+<p>研究组项目页提供了可以逐项核对的例子。AMD EPYC 测试平台上，AOCL 5.3.0 的 256 位 FP32 AVX2 余弦接口，表中观察到的最大误差为 <strong>12.778 ULP</strong>，而项目页所列版本的界限为 <strong>4 ULP</strong>。这两列说明一个具体接口在测试输入域里的最大偏差。它们无法回答这种输入在业务中出现的概率，也不能替代慢路径的吞吐测量。项目页另外标了后续追加的 SVML CR 数据，此处只取原研究版本的 AOCL 列。<a href="https://asc.ziti.uni-heidelberg.de/projects/2026-PNRFC/#fp32-avx2-accuracy">海德堡大学项目页与逐函数误差表</a></p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　给每个实际使用的函数准备三组向量：常见业务值、接近阈值的值、混有少量难算值的常见批次。分别记吞吐、最坏 ULP 和慢路径触发比例。混合批次尤其适合定位一个难算 lane 对整组执行的影响；是否只补算单个 lane 由具体库实现决定。</p>
 <h2 id="通用处理器架构">通用处理器架构</h2>
 <h3 id="apple-m-系列处理器是否满足-arm-与-tso-的复合内存模型">Apple M 系列处理器是否满足 Arm 与 TSO 的复合内存模型？</h3>
@@ -224,6 +227,7 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 </blockquote>
 <p>原文图 1(c) 用一个发消息的小例子解释这句话。把 <code>x</code> 想成数据，把 <code>y</code> 想成「写好了」的标志，两者最初都是 0。Arm 线程先写 <code>x = 1</code>，再用 release store 将 <code>y</code> 置 1。TSO 线程先读标志，再读数据。这个测试问的是：<strong>接收方能否看到标志已经为 1，数据却仍为 0？</strong> 复合模型禁止这个结果，论文报告两台机器都没有观察到它。该例子只覆盖这条明确的读写顺序。<a href="https://arxiv.org/html/2611.21406v1#S1.F1">原文图 1(c) 与测试说明</a></p>
 <p class="entry-text"><strong class="entry-label">结果</strong>　运行 Linux 的 M1 和 M2 各执行 936 个测试，每项各重复 6 亿次。529 个混合模式测试里，模型禁止的 348 个目标结果均未观察到。论文还记录了比所提模型更强的实际顺序，以及延长运行后才出现的允许结果。这里能说明的是给定测试在两台机器上的行为；文中没有 Apple 对内部实现的公开确认。</p>
+<p>图 1(d) 与 1(e) 是另一组辨别力更强的对照。两条 TSO 线程都先写一个地址、再用 acquire load 读另一地址，观察是否同时读到旧值。图示中改变写指令的 release 标注后，组合模型对同一结果的判断发生变化。实际测试的屏障替换见图注，作者在两台机器上都观察到 (e) 的允许结果，未观察到 (d) 的禁止结果。这组正、负例说明测试能把两个相近情形区分开，结论仍限于所测试的模式组合和变体。<a href="https://arxiv.org/html/2611.21406v1#S1.F1">原文图 1(d)–(e) 及图注</a></p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　设计兼容模式的回归时，可将同一段短程序分别放到 Arm/Arm、TSO/TSO、Arm/TSO 配置，再替换一条屏障或 acquire 指令做正负对照。若预期允许的结果始终为零，先检查采样时长、并发调度和测试是否确实覆盖该组合，再解释这个零值。</p>
 <h3 id="显微镜下的-spec-cpu2026程序阶段与采样">显微镜下的 SPEC CPU2026：程序、阶段与采样</h3>
 <p><em>SPEC CPU2026 Under the Microscope: Programs, Phases, and Samples</em></p>
@@ -236,24 +240,28 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 —— Peijun Li 等，<a href="https://arxiv.org/abs/2611.16376">论文摘要</a></p>
 </blockquote>
 <p>这里的「每个输入」指论文中的测试集合。重选依赖已经知道各区间的实测 CPI，作用是定位代表点造成了多少误差。它给新微架构仿真提供了诊断方法。</p>
+<p>一个具体例子是 <code>714.cpython_r/2</code>。占 <strong>36% 权重</strong> 的簇，默认选出的代表区间 IPC 为 <strong>3.02</strong>，整个簇平均为 <strong>3.57</strong>。默认估计的全程 CPI 因此出现 <strong>+7.0%</strong> 的误差。基本块向量能描述执行了哪些代码；遇到执行相似代码却跑得快慢不同的区间，还得另用硬件计数或性能指标交叉检查。这一例说明「代码相似」和「性能有代表性」是两个需要分别验证的条件。<a href="https://arxiv.org/html/2611.16376v1#S6.SS4">论文第 VI-D 节与图 9</a></p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　比较预取器、ROB 容量或缓存配置时，固定程序输入和权重，给稳定阶段与短时慢阶段分别看结果。改变几个代表点或随机种子做敏感性检查。如果收益随选点大幅变动，优先补测那个阶段，并核对暖机长度，避免把选点差异算到设计收益里。</p>
 <h2 id="开源项目与规范">开源项目与规范</h2>
 <h3 id="香山等-vstart-可见后再恢复译码">香山：等 <code>vstart</code> 可见后再恢复译码</h3>
 <p>11 月 17 日合入昆明湖 v2。</p>
 <p class="entry-text"><strong class="entry-label">问题</strong>　<code>vtype</code> 决定后续向量指令怎样解释元素宽度和寄存器分组，<code>vstart</code> 则记录从哪个元素继续执行。一次 <code>vsetvl</code> 刷新后，这两个状态的更新路径不同。配置可以先到译码，<code>vstart</code> 还要经过提交路径上的寄存器。若此时恢复，第一条新向量指令可能读到旧的起始位置。</p>
 <p class="entry-text"><strong class="entry-label">方法</strong>　补丁在 ROB 多打一拍 <code>isVsetFlushPipeReg</code>，将新增的寄存值并入发往译码的恢复路径控制信号。这样原有的等待多维持一个周期，提交后的向量 CSR 有时间变为可见。<a href="https://github.com/OpenXiangShan/XiangShan/commit/c95fe3f48312410138f5a48bfec55cb9cf26da8a">PR #6983 合入差分</a></p>
+<p>顺着信号读补丁，可以从 ROB 的 <code>isVsetFlushPipeReg2</code> 追到送给译码的 <code>isResumeVType</code>。在译码端，这个标志置位时，入口 <code>canAccept</code> 和出端指令的 <code>valid</code> 都被挡住。因此这次改变的是新指令可以被接收、发出的时刻，CSR 的存储结构没有改动。<a href="https://github.com/OpenXiangShan/XiangShan/blob/c95fe3f48312410138f5a48bfec55cb9cf26da8a/src/main/scala/xiangshan/backend/rob/Rob.scala#L625-L638">ROB 产生恢复标志</a> · <a href="https://github.com/OpenXiangShan/XiangShan/blob/c95fe3f48312410138f5a48bfec55cb9cf26da8a/src/main/scala/xiangshan/backend/decode/DecodeStage.scala#L192-L213">译码入口门控</a> · <a href="https://github.com/OpenXiangShan/XiangShan/blob/c95fe3f48312410138f5a48bfec55cb9cf26da8a/src/main/scala/xiangshan/backend/decode/DecodeStage.scala#L230-L236">译码出端有效位</a></p>
 <p class="entry-text"><strong class="entry-label">结果</strong>　这条恢复路径多等待一拍，修复目标是刷新边界的状态一致性。公开差分可核对新增寄存器和控制条件，未公布全程序 IPC 或刷新频率变化。</p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　先列一张逐拍表，记录「刷新开始」「提交后的 <code>vstart</code> 可见」「第一条新指令真正进入译码」。测试中让旧、新 <code>vstart</code> 取不同值，再覆盖连续重定向与译码背压。断言应检查消费的是正确版本的状态，等待一拍只是本实现达成这个条件的办法。</p>
 <h3 id="香山将-rob-入队的数据选择移到-bank">香山：将 ROB 入队的数据选择移到 bank</h3>
 <p>11 月 16 日合入昆明湖 v3。</p>
 <p class="entry-text"><strong class="entry-label">问题</strong>　每个重排序缓冲区（ROB）表项原来都要从同一批入队请求中选择头 µop 的数据。随着表项增多，这组宽数据选择器在许多位置重复，尽管同一个 bank 内只有获准写入的表项需要这份数据。</p>
 <p class="entry-text"><strong class="entry-label">方法</strong>　按入队指针的低位把请求映射到 bank，每个 bank 用一个独热选择器挑出头 µop。表项仍用完整指针比较生成自己的写使能；有重定向时，写入仍受控制。有两项配套约束：bank 数是 2 的幂，重命名宽度不超过 bank 数。<a href="https://github.com/OpenXiangShan/XiangShan/commit/3614486179322ff060a532608b1e8341e9a929b0">PR #6930 合入差分</a></p>
+<p>把数据和控制两条路径分开看。改动前，表项用自己的 <code>enqOH</code> 从所有请求里选数据。改动后，低位匹配先生成每个 bank 的 <code>bankHeadUop</code>，表项用 <code>i % bankNum</code> 取共享数据；写不写表项仍由原来的 <code>enqOH</code> 和重定向门控决定。源码的独热断言检查逐项选择，配置约束则在生成硬件时检查。补丁修改了入队 RTL，可从这些位置核对，差分没有附带新的测试文件。<a href="https://github.com/OpenXiangShan/XiangShan/blob/3614486179322ff060a532608b1e8341e9a929b0/src/main/scala/xiangshan/backend/rob/Rob.scala#L161-L188">选择器、写使能和配置约束</a> · <a href="https://github.com/OpenXiangShan/XiangShan/commit/3614486179322ff060a532608b1e8341e9a929b0">前后差分</a></p>
 <p class="entry-text"><strong class="entry-label">结果</strong>　从代码结构看，宽数据选择器从每个表项一份收敛到每个 bank 一份。真实面积仍取决于综合和布线，bank 内分发也会带来扇出。上游未公布面积、时钟或功耗数字。</p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　评估同类重构时，先用满宽入队、指针绕回和重定向检查 bank 的独热选择假设。再在同一约束下分别报告选择器面积、共享数据的扇出和最慢路径，看节省的逻辑有没有转移成布线负担。</p>
 <h3 id="llvm让-arm-sve-结构化加载处理固定长向量去交错">LLVM：让 Arm SVE 结构化加载处理固定长向量去交错</h3>
 <p>北京时间 11 月 12 日合入 LLVM 主干。</p>
 <p class="entry-text"><strong class="entry-label">问题</strong>　假设内存中依次放着 <code>A0, B0, A1, B1</code>，消费者却要两条分别存 A、B 的向量。SVE 的结构化加载可以在加载时分离通道。旧后端若碰到总宽度恰为 64 位的固定长向量，会错过这条加载和去交错的合并路径。</p>
 <p class="entry-text"><strong class="entry-label">方法</strong>　后端将固定长结果先表达在可伸缩向量容器里，用谓词限制参与的元素数。一次结构化加载分出各通道，之后再把结果裁回固定长度。以八个 8 位元素为例，谓词只激活前八个 lane，便能让固定长度的语义适配不同的硬件向量长度。</p>
+<p>入口是 <code>performVectorDeinterleaveCombine</code>。新增条件先检查目标是否选择用 SVE 实现固定长向量，再为加载选容器、生成适配固定元素数的谓词。源节点若已是 masked load，新增的固定长路径会提前退出。新增回归则从一段 LLVM IR 开始，用 FileCheck 核对预期汇编。这样可以区分代码写明的适用边界，以及这次补丁真正覆盖的路径。<a href="https://github.com/llvm/llvm-project/blob/5b0dc777e90c28aeea139a2326a4c8bdc101102d/llvm/lib/Target/AArch64/AArch64ISelLowering.cpp#L32041-L32087">后端匹配与谓词</a> · <a href="https://github.com/llvm/llvm-project/blob/5b0dc777e90c28aeea139a2326a4c8bdc101102d/llvm/test/CodeGen/AArch64/sve-fixed-vector-interleave.ll#L1-L48">固定长去交错回归</a></p>
 <p class="entry-text"><strong class="entry-label">结果</strong>　新增汇编回归在指定的 streaming-compatible 配置中检查 <code>ptrue … vl8</code> 以及相应的 <code>ld2b</code>、<code>ld3b</code> 或 <code>ld4b</code>。这证明测试用例走到了预期的指令选择路径；公开补丁没有芯片吞吐数字。<a href="https://github.com/llvm/llvm-project/commit/5b0dc777e90c28aeea139a2326a4c8bdc101102d">LLVM 合入差分</a></p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　验证合并时可用带通道标号的数组检查顺序，并覆盖不同实际向量长度和长度边界。性能评估另测每元素周期、访存带宽与未合并版本，从真实负载判断结构化加载是否值得。</p>
 <h3 id="risc-v-zama16b澄清非对齐原子性的适用范围">RISC-V Zama16b：澄清非对齐原子性的适用范围</h3>
@@ -261,24 +269,38 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 <p class="entry-text"><strong class="entry-label">问题</strong>　硬件和测试团队若只读特权手册的旧措辞，容易把保证推广到所有主存区域。非对齐访问能否按一个原子操作处理，还要看目标物理地址的属性和访问类型。</p>
 <p class="entry-text"><strong class="entry-label">方法</strong>　手册将 Zama16b 的要求对齐到既有扩展正文。MAG16，即 16 字节非对齐原子性粒度的支持要求，适用于同时可缓存且参加一致性的主存区域。还要判断访问是否属于这项物理内存属性覆盖的指令类型，并检查其字节范围。</p>
 <p class="entry-text"><strong class="entry-label">结果</strong>　提交明确了适用范围，没有把既有保证扩大到其他区域。向量访存仍不受这项粒度属性保证，即使它访问的字节都在同一个粒度内。<a href="https://github.com/riscv/riscv-isa-manual/commit/21ee747cb7c0815a5f60daee3d13b83c9a468517">RISC-V ISA 手册提交</a></p>
+<p>读差分时，先找 MAG16 这条规范性要求，再看前面关于向量访存的说明。改动发生在 <code>machine.adoc</code>，工程上要更新的是适用条件和验证预期，不能据此推断某个处理器已实现了这项属性。区域属性、指令类型和粒度内的字节覆盖仍需要一起检查。<a href="https://github.com/riscv/riscv-isa-manual/blob/21ee747cb7c0815a5f60daee3d13b83c9a468517/src/priv/machine.adoc#L3109-L3117">手册的原子性条件与向量例外</a></p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　在测试矩阵里为每个目标记录区域属性、指令类别、地址偏移和覆盖字节。比如在只实现 16 字节粒度的区域，选同一粒度内的非对齐访问和跨边界访问做对照。若将标量访问改写成向量访存，单独复核程序是否依赖原有的原子性保证。</p>
 <h3 id="gcc-rvv阻止宽窄源操作数的架构寄存器重叠">GCC RVV：阻止宽、窄源操作数的架构寄存器重叠</h3>
 <p>11 月 11 日进入 GCC 主干，提交 <code>r17-6133</code>。</p>
 <p class="entry-text"><strong class="entry-label">问题</strong>　<code>vwadd[u].wv</code> 的 <code>vs2</code> 按两倍 SEW 读取，<code>vs1</code> 按 SEW 读取。SEW 是选定的向量元素宽度。如果窄源编号落在宽源占用的寄存器组内，同一个架构寄存器会以两种有效元素宽度作为源读入，而向量规范保留了这样的编码。</p>
 <p class="entry-text"><strong class="entry-label">方法</strong>　GCC 在该指令模板的宽源约束中使用与对应浮点扩大加法相同的 <code>Wn4</code> 约束，让分配器处理跨寄存器组的冲突。判断冲突要展开两个源的实际寄存器范围，不能只比起始编号。<a href="https://gnu.googlesource.com/gcc/+/2e046596d270a5c61b8a02e18e69211a04453d16">GCC 提交与补丁</a></p>
+<p>提交举的例子是 <code>vwadd.wv v4,v4,v6</code>。在宽源从 <code>v4</code> 开始、实际占用范围包含 <code>v6</code> 的配置下，窄源 <code>v6</code> 就与宽源重叠；单看起始寄存器，<code>v4</code> 和 <code>v6</code> 看起来仍然不同。差分改的是 <code>gcc/config/riscv/vector.md</code> 中操作数 3 的约束。这次提交未增加测试文件，能够直接核对的是编译器模板的约束变化和作者给的反例。<a href="https://gnu.googlesource.com/gcc/+/2e046596d270a5c61b8a02e18e69211a04453d16">触发实例及单文件差分</a> · <a href="https://gnu.googlesource.com/gcc/+/2e046596d270a5c61b8a02e18e69211a04453d16/gcc/config/riscv/vector.md">修改后的指令模板</a></p>
 <p class="entry-text"><strong class="entry-label">结果</strong>　主干修复针对的是此前可能生成的保留编码。它改的是汇编生成约束，不改变指令语义；提交未报告性能变化。</p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　回归可在较高寄存器压力下变换合法的 LMUL 和向量元素宽度，检查生成汇编中宽、窄源的占用范围。涉及可合法重叠的目的操作数时，应分别用规范中的目的操作数规则判断。</p>
 <h2 id="专利">专利</h2>
 <h3 id="amd重用阵列做矩阵与向量乘积">AMD：重用阵列做矩阵与向量乘积</h3>
 <p>US20260359386A1，<em>Matrix Engine with Matrix and Vector Products</em>。申请人为 Advanced Micro Devices, Inc.，主张 2025-03-13 的美国临时申请优先权，2026-11-12 公开。</p>
 <p class="entry-text"><strong class="entry-label">问题</strong>　连续的矩阵、向量运算会产生还要马上消费的中间数据。如果下一阶段的输入只能从阵列外获取，就得先把中间值写出，再从外部重新送进来。给不同乘积各配一套阵列，也会让运算资源难以复用。</p>
-<p class="entry-text"><strong class="entry-label">方法</strong>　权利要求 1–3 通过指令控制行、列输入选择器，以不同顺序送操作数。权利要求 4 让一部分单元的结果寄存器输出可回到输入选择器，后续操作可以选这个反馈值。权利要求 6–9 进一步覆盖几类输入序列与操作。例子可以这样理解：先在阵列中形成一组部分和，再让下一次运算从结果寄存器取这一组值，其余操作数仍从行列入口进来。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359386">USPTO 原件，权利要求第 16–17 页</a></p>
+<p class="entry-text"><strong class="entry-label">方法</strong>　让指令选择从哪里给阵列喂数据。举例说，先由算术单元形成一组部分和，把它存在阵列内的结果寄存器。下一条指令让选择器从这个寄存器取值，其他操作数仍从原来的输入口进来。这样可以沿着「存中间结果 → 按指令选输入 → 进入下一阶段」理解反馈路径。</p>
+<h4 id="先看权利要求中哪一步必须出现">先看权利要求中哪一步必须出现</h4>
+<ul>
+<li><strong>独立项 1</strong> 写的是多个算术单元和一个按指令选择向量输入序列的选择器。沿着这一项可先找到「指令 → 选择器 → 运算单元」。</li>
+<li><strong>从属项 2、3</strong> 加上第二个选择器及行列方向。<strong>从属项 4</strong> 回引第 2 项，另加结果寄存器输出接回第一选择器。这就是正文中“中间值回送”的出处。</li>
+<li><strong>从属项 6–8</strong> 沿另一条链增加可选输入序列，并分别对应矩阵乘和向量乘。<strong>从属项 9</strong> 直接回引第 1 项来限定转置。按回引编号阅读时，这两支各自的限定就能分清。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359386#page=16">USPTO 公开文本第 16–17 页</a></li>
+</ul>
 <p class="entry-text"><strong class="entry-label">披露的效果</strong>　在这一路径能够覆盖的运算序列里，阵列内部的结果可直接成为后续输入，省去为该中间值安排单独的外部写出和重读。专利没有披露实际省下多少周期或能耗，也没有给出量产实现的验证。</p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　先从真实算子链挑一组能马上被消费的中间值，列出原方案几次外部访问，估算哪些确实可省。再验证反馈可用的拍数、下一步的选择器级数，以及两条操作同时抢反馈时的仲裁。若中间值还会被多个消费者使用，要保留其他消费者的可见性。</p>
 <h3 id="qualcomm矩阵单元直接消费线性寄存器布局">Qualcomm：矩阵单元直接消费线性寄存器布局</h3>
 <p>US20260359928A1，<em>Techniques for Supporting Different Register Layouts in Graphics Processing Units (GPUs)</em>。申请人为 Qualcomm Incorporated，美国申请日为 2025-05-12，公开首页未列另行优先权，2026-11-12 公开。</p>
 <p class="entry-text"><strong class="entry-label">问题</strong>　同一块矩阵可以按不同行列方式分布到 GPU 的通用寄存器。矩阵单元偏好的布局与后继向量指令要读取的布局不一致时，程序会多出寄存器重排。矩阵与向量指令交错越频繁，这种转换越容易出现在主路径。</p>
-<p class="entry-text"><strong class="entry-label">方法</strong>　权利要求 1–3 允许将矩阵按行或列线性放入通用寄存器，矩阵单元直接读这种布局。权利要求 4–8 涉及编译时选择，以及将结果按线性方式写回。举例说，如果一次 GEMM 的结果随后逐行做激活，可以从写回时就让同一行保持连续布局，后继向量指令按其需要读取。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359928">USPTO 原件，权利要求第 21–22 页</a></p>
+<p class="entry-text"><strong class="entry-label">方法</strong>　让装入寄存器的数据排布和后续消费者对齐。举例说，一次 GEMM 的结果接着逐行做激活，可以在写回时就让同一行保持线性布局，给向量指令逐行读取。读入、矩阵乘、写回三个步骤分别由下列权利要求交代。</p>
+<h4 id="从读入口和写出口分别定位条款">从读入口和写出口分别定位条款</h4>
+<ul>
+<li><strong>独立项 1</strong> 从内存装入数据，让不同的矩阵线落到不同 GPR，由矩阵乘单元使用，每个执行线程（fiber）处理相应的一条线。<strong>从属项 2、3</strong> 各自把矩阵线指定为行或列，两项分别回引第 1 项。</li>
+<li><strong>从属项 4、6</strong> 将编译器选择与向量运算及指令交错关联。<strong>从属项 7</strong> 单独从第 1 项引出线性写回，<strong>第 8 项</strong>再将写回选择和后续向量运算关联。</li>
+<li>用「一次读入 → 矩阵乘 → 写回 → 激活」做图解时，前半段有独立项 1 的对应动作，后半段使用第 7、8 项提供的额外条件。方案能否少做重排还要看后继算子的布局，逐行激活是本文选的说明例子。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359928#page=21">USPTO 公开文本第 21–22 页</a></li>
+</ul>
 <p class="entry-text"><strong class="entry-label">披露的效果</strong>　矩阵单元与后继向量指令在布局相容时，可直接交接这段数据。这是权利要求所描述的能力。公开申请没有提供产品实现、吞吐或省下的重排次数。</p>
 <p class="entry-text"><strong class="entry-label">可借鉴</strong>　评估时可用同一组 GEMM 接逐行激活、逐列归约两类消费者。分别数编译生成的重排指令、矩阵读写占用的寄存器端口，以及各自的 bank 冲突。一个布局可能方便一类消费者，在另一类路径又添了成本，这组对照能把权衡测出来。</p>
 <h2 id="ai-工程实践">AI 工程实践</h2>
