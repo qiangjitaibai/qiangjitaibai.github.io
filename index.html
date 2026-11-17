@@ -4,86 +4,262 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="羟基太白的处理器架构与矢量设计周刊。查看最新一期和往期归档。">
+  <meta name="theme-color" content="#f5f3eb">
   <title>处理器架构与矢量设计周刊 · 羟基太白</title>
   <style>
     :root {
-      color-scheme: dark;
-      --background: #0a0a0f;
-      --surface: #141722;
-      --line: #30354a;
-      --text: #f5f5fb;
-      --muted: #aeb5cb;
-      --accent: #accdff;
+      color-scheme: light;
+      --paper: #f5f3eb;
+      --ink: #1f2a23;
+      --muted: #515c50;
+      --accent: #315841;
+      --rule: #cdd0c2;
+      --title-font: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", SimSun, serif;
     }
+
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      color: var(--text);
-      background: var(--background);
-      font: 1rem/1.65 Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      font: 1rem/1.7 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
     }
-    main { width: min(64rem, calc(100% - 3rem)); margin: 0 auto; padding: clamp(2rem, 6vw, 4.75rem) 0; }
-    a { color: var(--accent); text-underline-offset: .22em; }
-    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
-    .name { color: var(--muted); margin: 0 0 clamp(1.7rem, 4vw, 3.25rem); font-size: .9rem; }
-    h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.7rem); line-height: 1.15; text-wrap: balance; }
-    .intro { margin: .9rem 0 0; color: var(--muted); }
-    .lead { margin-top: clamp(1.8rem, 4vw, 2.7rem); display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 1rem; }
-    .current, .history, .guestbook { padding: clamp(1.2rem, 3.2vw, 2.1rem); border: 1px solid var(--line); border-radius: 1rem; }
-    .current { background: var(--surface); border-color: #465b81; }
-    .history { display: flex; flex-direction: column; justify-content: space-between; background: #10111a; }
-    h2 { margin: 0; font-size: clamp(1.25rem, 2.5vw, 1.65rem); line-height: 1.35; }
-    .edition { color: var(--accent); margin: .8rem 0 0; font-weight: 650; font-variant-numeric: tabular-nums; }
-    .summary, .history p { color: var(--muted); margin: .65rem 0 0; }
-    .read { display: inline-flex; align-items: center; gap: 1rem; margin-top: 1.1rem; font-weight: 650; }
-    .history h2 a { text-decoration: none; }
-    .history h2 a:hover { text-decoration: underline; }
-    .history h2 span { margin-left: .25rem; }
-    .secondary { margin-top: clamp(2.5rem, 6vw, 4.5rem); padding-top: 1.2rem; border-top: 1px solid var(--line); }
-    .secondary ul { margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .8rem 1.75rem; list-style: none; }
-    .secondary a { color: var(--muted); }
-    .secondary a:hover { color: var(--accent); }
-    .guestbook { margin-top: 1.2rem; background: #10111a; }
-    @media (max-width: 43rem) {
-      main { width: min(64rem, calc(100% - 2rem)); }
-      .lead { grid-template-columns: minmax(0, 1fr); }
+    a { color: var(--accent); text-underline-offset: .26em; }
+    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+    .wrap { width: min(69rem, calc(100% - clamp(2.5rem, 10vw, 9.5rem))); margin-inline: auto; }
+    .skip {
+      position: absolute;
+      top: .75rem;
+      left: .75rem;
+      z-index: 1;
+      padding: .5rem 1rem;
+      background: var(--paper);
+      transform: translateY(-200%);
+    }
+    .skip:focus { transform: none; }
+
+    .masthead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .5rem 1rem;
+      min-height: clamp(4rem, 7vw, 5.5rem);
+      border-bottom: 1px solid var(--rule);
+    }
+    .wordmark {
+      display: inline-flex;
+      align-items: center;
+      gap: .6rem;
+      min-height: 44px;
+      color: var(--ink);
+      font-size: 1.1rem;
+      font-weight: 750;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .wordmark::before {
+      width: .68rem;
+      height: .68rem;
+      background: var(--accent);
+      content: "";
+    }
+    .masthead ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0 clamp(.75rem, 3vw, 2.25rem);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .masthead nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      color: var(--muted);
+      font-size: .9rem;
+      text-decoration-color: transparent;
+      white-space: nowrap;
+    }
+    .masthead nav a:hover, .wordmark:hover { color: var(--accent); text-decoration: underline; }
+
+    main.wrap { padding-bottom: clamp(3.5rem, 9vw, 7rem); }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, .53fr);
+      align-items: center;
+      gap: clamp(2rem, 6vw, 5.5rem);
+      padding-block: clamp(3.5rem, min(8.5vw, 12vh), 7.75rem);
+    }
+    h1 {
+      margin: 0;
+      font: 700 clamp(2.25rem, 5.4vw, 5.15rem)/1.17 var(--title-font);
+      letter-spacing: -.045em;
+    }
+    h1 span { display: block; }
+    .intro { max-width: 31rem; margin: 1.25rem 0 0; color: var(--muted); text-wrap: pretty; }
+
+    .diagram {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: min(100%, 21rem);
+      aspect-ratio: 1.25;
+      justify-self: end;
+      color: var(--accent);
+      background: radial-gradient(circle, #b9c3b2 1px, transparent 1.2px) center / 1rem 1rem;
+    }
+    .diagram::before, .diagram::after {
+      position: absolute;
+      width: 1.2rem;
+      height: 1.2rem;
+      border: solid var(--accent);
+      content: "";
+    }
+    .diagram::before { inset: 0 auto auto 0; border-width: 1px 0 0 1px; }
+    .diagram::after { inset: auto 0 0 auto; border-width: 0 1px 1px 0; }
+    .lanes { display: grid; gap: clamp(.55rem, 1.1vw, .9rem); width: 66%; }
+    .lane {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      isolation: isolate;
+      gap: clamp(.35rem, .8vw, .7rem);
+    }
+    .lane::before {
+      position: absolute;
+      z-index: -1;
+      inset: 50% -.9rem auto -.9rem;
+      border-top: 1px solid #687f68;
+      content: "";
+    }
+    .lane::after {
+      position: absolute;
+      top: 50%;
+      right: -.9rem;
+      width: .3rem;
+      height: .3rem;
+      border: solid var(--accent);
+      border-width: 1px 1px 0 0;
+      transform: translateY(-50%) rotate(45deg);
+      content: "";
+    }
+    .lane span {
+      aspect-ratio: 1.5;
+      background: #eceee3;
+      border: 1px solid #748571;
+    }
+    .lane .on { background: var(--accent); border-color: var(--accent); }
+    .lane .mid { background: #b5c3a9; }
+
+    .section {
+      display: grid;
+      grid-template-columns: minmax(8rem, .27fr) minmax(0, 1fr);
+      align-items: start;
+      gap: .9rem clamp(1.25rem, 5vw, 4rem);
+      padding-block: clamp(1.65rem, 4vw, 3.25rem);
+      border-top: 1px solid var(--rule);
+      scroll-margin-top: 1rem;
+    }
+    h2 { margin: 0; font: 700 1.5rem/1.35 var(--title-font); }
+    .section-body { min-width: 0; }
+    .edition {
+      margin: 0;
+      font: 700 clamp(1.35rem, 3vw, 2rem)/1.3 var(--title-font);
+    }
+    .edition time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .summary { max-width: 42rem; margin: 0; color: var(--muted); }
+    .latest .summary { margin-top: .75rem; }
+    .read, .text-link {
+      display: inline-flex;
+      align-items: center;
+      gap: .65em;
+      min-height: 44px;
+      font-weight: 650;
+    }
+    .read {
+      margin-top: 1.15rem;
+      padding: .48rem .95rem;
+      border-radius: .25rem;
+      color: white;
+      background: var(--accent);
+      text-decoration: none;
+      transition: background-color 150ms ease;
+    }
+    .read:hover { background: #254433; }
+    .text-link { text-decoration-color: #829280; }
+    .text-link:hover { text-decoration-color: currentColor; }
+    .archive-link { margin-top: .55rem; }
+    .guestbook-link { margin-top: .4rem; }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .hero { animation: enter 460ms ease-out both; }
+      @keyframes enter {
+        from { opacity: 0; transform: translateY(7px); }
+        to { opacity: 1; transform: none; }
+      }
+    }
+    @media (max-width: 42rem) {
+      .hero { grid-template-columns: minmax(0, 1fr); padding-block: 3rem 2.75rem; }
+      h1 { font-size: clamp(2.2rem, 8.7vw, 3.55rem); }
+      .intro { margin-top: .9rem; }
+      .diagram { width: min(100%, 16rem); aspect-ratio: 1.65; justify-self: start; }
+      .lane span { aspect-ratio: 2.25; }
+      .section { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 24rem) {
+      .wordmark { font-size: .95rem; gap: .4rem; }
+      .wordmark::before { width: .55rem; height: .55rem; }
+      .masthead nav a { font-size: .8rem; }
     }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <p class="name">羟基太白</p>
-      <h1>处理器架构与矢量设计周刊</h1>
-      <p class="intro">论文、开源项目、架构规范、专利与 AI 工程实践。</p>
-    </header>
-    <div class="lead">
-      <section class="current" aria-labelledby="current-title">
-        <h2 id="current-title">周刊</h2>
-        <div>
+  <a class="skip" href="#main">跳至主要内容</a>
+  <header class="masthead wrap">
+    <a class="wordmark" href="/">羟基太白</a>
+    <nav aria-label="站点导航">
+      <ul>
+        <li><a href="#weekly">周刊</a></li>
+        <li><a href="/about/">自我简介</a></li>
+        <li><a href="#guestbook">留言板</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="wrap" id="main">
+    <div class="hero">
+      <div>
+        <h1><span>处理器架构与</span><span>矢量设计周刊</span></h1>
+        <p class="intro">论文、开源项目、架构规范、专利与 AI 工程实践。</p>
+      </div>
+      <div class="diagram" aria-hidden="true">
+        <div class="lanes">
+          <div class="lane"><span class="on"></span><span class="mid"></span><span></span><span></span></div>
+          <div class="lane"><span></span><span class="on"></span><span class="mid"></span><span></span></div>
+          <div class="lane"><span></span><span></span><span class="on"></span><span class="mid"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <section class="section" id="weekly" aria-labelledby="weekly-title">
+      <h2 id="weekly-title">周刊</h2>
+      <div class="section-body">
+        <div class="latest">
             <!-- WEEKLY-LATEST:START -->
             <p class="edition">第 001 期 · 试刊号 <span aria-hidden="true">·</span> <time datetime="2026-11-17">2026-11-17</time></p>
             <a class="read" href="/weekly/pilot.html">阅读本期 <span aria-hidden="true">↗</span></a>
             <!-- WEEKLY-LATEST:END -->
         </div>
-      </section>
-      <section class="history" aria-labelledby="history-title">
-        <div>
-          <h2 id="history-title"><a href="/weekly/">往期周刊 <span aria-hidden="true">↗</span></a></h2>
-          <p>按期查看已发布的周刊。</p>
-        </div>
-      </section>
-    </div>
-    <nav class="secondary" aria-label="站点导航">
-      <ul>
-        <li><a href="/about/">自我简介</a></li>
-        <li><a href="#guestbook">留言板</a></li>
-      </ul>
-    </nav>
-    <section class="guestbook" id="guestbook" aria-labelledby="guestbook-title">
+        <a class="text-link archive-link" href="/weekly/">往期周刊 <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+
+    <section class="section" id="guestbook" aria-labelledby="guestbook-title">
       <h2 id="guestbook-title">留言板</h2>
-      <p class="summary">欢迎聊聊周刊、推荐选题，或打个招呼。登录 GitHub 后即可公开留言和回复。</p>
-      <a class="read" href="https://github.com/qiangjitaibai/qiangjitaibai.github.io/discussions/1">前往 GitHub 留言 <span aria-hidden="true">↗</span></a>
+      <div class="section-body">
+        <p class="summary">欢迎聊聊周刊或推荐选题。登录 GitHub 后可以公开留言和回复。</p>
+        <a class="text-link guestbook-link" href="https://github.com/qiangjitaibai/qiangjitaibai.github.io/discussions/1">前往留言 <span aria-hidden="true">↗</span></a>
+      </div>
     </section>
   </main>
 </body>
