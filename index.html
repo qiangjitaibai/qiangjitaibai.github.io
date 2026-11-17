@@ -1,210 +1,83 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>羟基太白 · qiangjitaibai</title>
-<style>
-  :root {
-    --bg: #0a0a0f; --card: #12121a; --border: #1e1e2e;
-    --text: #cdd6f4; --sub: #6c7086; --heading: #f5f5f9;
-    --acc: #89b4fa; --acc2: #f38ba8; --acc3: #a6e3a1; --acc4: #fab387;
-    --glow: rgba(137,180,250,0.08);
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body {
-    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;
-    background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden;
-  }
-  .bg-grid {
-    position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0;
-    background-image:
-      linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
-    background-size: 60px 60px;
-  }
-  .bg-glow { position: fixed; width: 500px; height: 500px; border-radius: 50%; filter: blur(100px); opacity: .06; pointer-events: none; z-index: 0; }
-  .bg-glow.g1 { top: -150px; right: -100px; background: var(--acc); }
-  .bg-glow.g2 { bottom: -150px; left: -100px; background: var(--acc2); }
-  .container { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 80px 24px 60px; }
-  header { margin-bottom: 52px; }
-  header .avatar {
-    width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--acc), var(--acc3));
-    display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 18px;
-    box-shadow: 0 0 30px rgba(137,180,250,.12);
-  }
-  header h1 { font-size: 30px; color: var(--heading); font-weight: 700; letter-spacing: -.5px; }
-  header .title { color: var(--acc); font-size: 14px; font-weight: 600; margin-top: 4px; }
-  header .bio { color: var(--sub); font-size: 14px; margin-top: 10px; line-height: 1.7; max-width: 500px; }
-  .tag-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-  .tag-row span { padding: 3px 12px; border-radius: 16px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); color: var(--sub); }
-  section { margin-bottom: 44px; }
-  section h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 2.5px; color: var(--acc); margin-bottom: 18px; font-weight: 700; }
-  .cards { display: grid; gap: 10px; }
-  .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-    padding: 20px 24px; text-decoration: none; color: var(--text);
-    transition: all .25s; display: flex; align-items: center; gap: 14px;
-  }
-  .card:hover { border-color: var(--acc); transform: translateX(5px); box-shadow: 0 4px 16px var(--glow); }
-  .card .icon {
-    width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 18px;
-  }
-  .card:nth-child(1) .icon { background: rgba(137,180,250,.12); }
-  .card:nth-child(2) .icon { background: rgba(166,227,161,.12); }
-  .card:nth-child(3) .icon { background: rgba(243,139,168,.12); }
-  .card .info { flex: 1; min-width: 0; }
-  .card .info h3 { font-size: 15px; color: var(--heading); font-weight: 600; margin-bottom: 2px; }
-  .card .info p { font-size: 12px; color: var(--sub); }
-  .card .arrow { color: var(--sub); font-size: 15px; transition: .25s; flex-shrink: 0; }
-  .card:hover .arrow { transform: translateX(4px); color: var(--acc); }
-  .timeline { position: relative; padding-left: 20px; border-left: 1px solid var(--border); margin-left: 6px; }
-  .timeline-item { margin-bottom: 18px; position: relative; }
-  .timeline-item::before {
-    content:''; position: absolute; left: -25px; top: 5px;
-    width: 9px; height: 9px; border-radius: 50%; background: var(--acc);
-    border: 2px solid var(--bg);
-  }
-  .timeline-item .period { font-size: 12px; color: var(--acc); font-weight: 600; }
-  .timeline-item .org { font-size: 14px; color: var(--heading); font-weight: 600; margin-top: 2px; }
-  .timeline-item .role { font-size: 13px; color: var(--sub); margin-top: 1px; }
-  .timeline-item .desc { font-size: 12px; color: var(--sub); margin-top: 4px; line-height: 1.6; }
-  .skill-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
-  .skill-cloud span {
-    padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
-    background: var(--card); border: 1px solid var(--border); color: var(--text);
-  }
-  .edu-item { margin-bottom: 14px; }
-  .edu-item .degree { font-size: 14px; color: var(--heading); font-weight: 600; }
-  .edu-item .school { font-size: 13px; color: var(--sub); }
-  .edu-item .date { font-size: 12px; color: var(--sub); }
-  footer {
-    margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--border);
-    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
-  }
-  footer p { color: var(--sub); font-size: 12px; }
-  footer a { color: var(--acc); text-decoration: none; font-size: 12px; }
-  footer a:hover { text-decoration: underline; }
-  @media (max-width: 600px) {
-    .container { padding: 40px 16px 36px; }
-    header h1 { font-size: 24px; }
-    .card { padding: 16px 18px; }
-  }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="羟基太白的处理器架构与矢量设计周报。查看最新一期和往期归档。">
+  <title>处理器架构与矢量设计周报 · 羟基太白</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --background: #0a0a0f;
+      --surface: #141722;
+      --line: #30354a;
+      --text: #f5f5fb;
+      --muted: #aeb5cb;
+      --accent: #accdff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--background);
+      font: 1rem/1.65 Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+    main { width: min(64rem, calc(100% - 3rem)); margin: 0 auto; padding: clamp(2rem, 6vw, 4.75rem) 0; }
+    a { color: var(--accent); text-underline-offset: .22em; }
+    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
+    .name { color: var(--muted); margin: 0 0 clamp(1.7rem, 4vw, 3.25rem); font-size: .9rem; }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.7rem); line-height: 1.15; text-wrap: balance; }
+    .intro { margin: .9rem 0 0; color: var(--muted); }
+    .lead { margin-top: clamp(1.8rem, 4vw, 2.7rem); display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 1rem; }
+    .current, .history { padding: clamp(1.2rem, 3.2vw, 2.1rem); border: 1px solid var(--line); border-radius: 1rem; }
+    .current { background: var(--surface); border-color: #465b81; }
+    .history { display: flex; flex-direction: column; justify-content: space-between; background: #10111a; }
+    h2 { margin: 0; font-size: clamp(1.25rem, 2.5vw, 1.65rem); line-height: 1.35; }
+    .edition { color: var(--accent); margin: .8rem 0 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+    .summary, .history p { color: var(--muted); margin: .65rem 0 0; }
+    .read { display: inline-flex; align-items: center; gap: 1rem; margin-top: 1.1rem; font-weight: 650; }
+    .history h2 a { text-decoration: none; }
+    .history h2 a:hover { text-decoration: underline; }
+    .history h2 span { margin-left: .25rem; }
+    .secondary { margin-top: clamp(2.5rem, 6vw, 4.5rem); padding-top: 1.2rem; border-top: 1px solid var(--line); }
+    .secondary ul { margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .8rem 1.75rem; list-style: none; }
+    .secondary a { color: var(--muted); }
+    .secondary a:hover { color: var(--accent); }
+    @media (max-width: 43rem) {
+      main { width: min(64rem, calc(100% - 2rem)); }
+      .lead { grid-template-columns: minmax(0, 1fr); }
+    }
+  </style>
 </head>
 <body>
-<div class="bg-grid"></div>
-<div class="bg-glow g1"></div>
-<div class="bg-glow g2"></div>
-<div class="container">
-  <header>
-    <div class="avatar">⚛️</div>
-    <h1>羟基太白</h1>
-    <div class="title">数字芯片设计工程师 · 处理器体系结构</div>
-    <p class="bio">浙江大学博士。重生之我在大厂写 bug。</p>
-    <div class="tag-row">
-      <span>处理器架构</span><span>RISC-V</span><span>Verilog</span><span>AI 编程</span><span>分析哲学</span>
-    </div>
-  </header>
-
-  <section>
-    <h2>周报</h2>
-    <div class="cards">
-      <a class="card" href="/weekly/">
-        <div class="icon" aria-hidden="true">▤</div>
-        <div class="info">
-          <h3>处理器架构与矢量设计周报</h3>
-          <p>最新一期与往期归档</p>
+  <main>
+    <header>
+      <p class="name">羟基太白</p>
+      <h1>处理器架构与矢量设计周报</h1>
+      <p class="intro">论文、开源项目、架构规范、专利与 AI 工程实践。</p>
+    </header>
+    <div class="lead">
+      <section class="current" aria-labelledby="current-title">
+        <h2 id="current-title">周报</h2>
+        <div>
+            <!-- WEEKLY-LATEST:START -->
+            <p class="summary">首期正在筹备，发布后将在这里展示。</p>
+            <!-- WEEKLY-LATEST:END -->
         </div>
-        <span class="arrow" aria-hidden="true">→</span>
-      </a>
-    </div>
-  </section>
-
-  <section>
-    <h2>📚 课程</h2>
-    <div class="cards">
-      <a class="card" href="/claude-code-course-15d/">
-        <div class="icon">💻</div>
-        <div class="info">
-          <h3>Claude Code 15 天实战指南</h3>
-          <p>安装配置 · 国内大模型接入 · 文案创作 · 数据处理 · 工作流自动化</p>
+      </section>
+      <section class="history" aria-labelledby="history-title">
+        <div>
+          <h2 id="history-title"><a href="/weekly/">往期周报 <span aria-hidden="true">↗</span></a></h2>
+          <p>按期查看已发布的周报。</p>
         </div>
-        <span class="arrow">→</span>
-      </a>
-      <a class="card" href="/cola-skill-5days/">
-        <div class="icon">🛠️</div>
-        <div class="info">
-          <h3>5 天学会 Skill 编写</h3>
-          <p>Description 写法 · 三层架构 · Design Patterns · 完整实战</p>
-        </div>
-        <span class="arrow">→</span>
-      </a>
-      <a class="card" href="/analytic-philosophy-15d/">
-        <div class="icon">🧠</div>
-        <div class="info">
-          <h3>15 天分析哲学入门</h3>
-          <p>弗雷格 · 罗素 · 维特根斯坦 · 蒯因 · 克里普克 · SEP 参考链接</p>
-        </div>
-        <span class="arrow">→</span>
-      </a>
+      </section>
     </div>
-  </section>
-
-  <section>
-    <h2>💼 经历</h2>
-    <div class="timeline">
-      <div class="timeline-item">
-        <div class="period">2021.07 — 至今</div>
-        <div class="org">阿里巴巴平头哥半导体</div>
-        <div class="role">处理器体系结构开发</div>
-      </div>
-      <div class="timeline-item">
-        <div class="period">2016.05 — 2021.06</div>
-        <div class="org">华为海思 · 信道研发部</div>
-        <div class="role">高级工程师</div>
-        <div class="desc">2018.09 – 2021.06 蓝牙 Controller 基带 MAC 模块负责人<br>2016.05 – 2018.08 卫星电视接收信道芯片 核心成员</div>
-      </div>
-      <div class="timeline-item">
-        <div class="period">2009.06 — 2016.04</div>
-        <div class="org">杭州中天微系统 · CPU 设计部</div>
-        <div class="role">实习生</div>
-        <div class="desc">参与多款处理器体系结构的设计和验证</div>
-      </div>
-    </div>
-  </section>
-
-  <section>
-    <h2>🎓 教育</h2>
-    <div class="edu-item">
-      <div class="degree">博士 · 超大规模集成电路设计</div>
-      <div class="school">浙江大学 · 超大规模集成电路设计研究所</div>
-      <div class="date">2010.09 — 2016.03</div>
-    </div>
-    <div class="edu-item">
-      <div class="degree">学士 · 电子信息工程 + 工商管理 + 荣誉工学</div>
-      <div class="school">浙江大学 · 电气工程学院 / 管理学院 / 竺可桢学院</div>
-      <div class="date">2006.09 — 2010.06</div>
-    </div>
-  </section>
-
-  <section>
-    <h2>🛠️ 技能</h2>
-    <div class="skill-cloud">
-      <span>处理器体系结构</span><span>Verilog / SystemVerilog</span><span>C</span><span>Python</span><span>Perl</span>
-      <span>数字电路设计流程</span><span>蓝牙协议</span><span>RISC-V</span>
-    </div>
-  </section>
-
-  <footer>
-    <p>认真生活，快乐工作</p>
-    <div>
-      <a href="https://github.com/qiangjitaibai">GitHub</a>
-      <span style="color:var(--sub);margin:0 8px">·</span>
-      <a href="mailto:qiujingqiujing@foxmail.com">Email</a>
-    </div>
-  </footer>
-</div>
+    <nav class="secondary" aria-label="个人资料与课程">
+      <ul>
+        <li><a href="/about/">自我简介</a></li>
+        <li><a href="/courses/">课程链接</a></li>
+      </ul>
+    </nav>
+  </main>
 </body>
 </html>

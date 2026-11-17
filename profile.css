@@ -1,0 +1,88 @@
+  :root {
+    --bg: #0a0a0f; --card: #12121a; --border: #1e1e2e;
+    --text: #cdd6f4; --sub: #6c7086; --heading: #f5f5f9;
+    --acc: #89b4fa; --acc2: #f38ba8; --acc3: #a6e3a1; --acc4: #fab387;
+    --glow: rgba(137,180,250,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden;
+  }
+  .bg-grid {
+    position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .bg-glow { position: fixed; width: 500px; height: 500px; border-radius: 50%; filter: blur(100px); opacity: .06; pointer-events: none; z-index: 0; }
+  .bg-glow.g1 { top: -150px; right: -100px; background: var(--acc); }
+  .bg-glow.g2 { bottom: -150px; left: -100px; background: var(--acc2); }
+  .container { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 80px 24px 60px; }
+  header { margin-bottom: 52px; }
+  header .avatar {
+    width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, var(--acc), var(--acc3));
+    display: flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 18px;
+    box-shadow: 0 0 30px rgba(137,180,250,.12);
+  }
+  header h1 { font-size: 30px; color: var(--heading); font-weight: 700; letter-spacing: -.5px; }
+  header .title { color: var(--acc); font-size: 14px; font-weight: 600; margin-top: 4px; }
+  header .bio { color: var(--sub); font-size: 14px; margin-top: 10px; line-height: 1.7; max-width: 500px; }
+  .tag-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .tag-row span { padding: 3px 12px; border-radius: 16px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); color: var(--sub); }
+  section { margin-bottom: 44px; }
+  section h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 2.5px; color: var(--acc); margin-bottom: 18px; font-weight: 700; }
+  .cards { display: grid; gap: 10px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px; text-decoration: none; color: var(--text);
+    transition: all .25s; display: flex; align-items: center; gap: 14px;
+  }
+  .card:hover { border-color: var(--acc); transform: translateX(5px); box-shadow: 0 4px 16px var(--glow); }
+  .card .icon {
+    width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .card:nth-child(1) .icon { background: rgba(137,180,250,.12); }
+  .card:nth-child(2) .icon { background: rgba(166,227,161,.12); }
+  .card:nth-child(3) .icon { background: rgba(243,139,168,.12); }
+  .card .info { flex: 1; min-width: 0; }
+  .card .info h3 { font-size: 15px; color: var(--heading); font-weight: 600; margin-bottom: 2px; }
+  .card .info p { font-size: 12px; color: var(--sub); }
+  .card .arrow { color: var(--sub); font-size: 15px; transition: .25s; flex-shrink: 0; }
+  .card:hover .arrow { transform: translateX(4px); color: var(--acc); }
+  .timeline { position: relative; padding-left: 20px; border-left: 1px solid var(--border); margin-left: 6px; }
+  .timeline-item { margin-bottom: 18px; position: relative; }
+  .timeline-item::before {
+    content:''; position: absolute; left: -25px; top: 5px;
+    width: 9px; height: 9px; border-radius: 50%; background: var(--acc);
+    border: 2px solid var(--bg);
+  }
+  .timeline-item .period { font-size: 12px; color: var(--acc); font-weight: 600; }
+  .timeline-item .org { font-size: 14px; color: var(--heading); font-weight: 600; margin-top: 2px; }
+  .timeline-item .role { font-size: 13px; color: var(--sub); margin-top: 1px; }
+  .timeline-item .desc { font-size: 12px; color: var(--sub); margin-top: 4px; line-height: 1.6; }
+  .skill-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+  .skill-cloud span {
+    padding: 6px 16px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+  }
+  .edu-item { margin-bottom: 14px; }
+  .edu-item .degree { font-size: 14px; color: var(--heading); font-weight: 600; }
+  .edu-item .school { font-size: 13px; color: var(--sub); }
+  .edu-item .date { font-size: 12px; color: var(--sub); }
+  footer {
+    margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  }
+  footer p { color: var(--sub); font-size: 12px; }
+  footer a { color: var(--acc); text-decoration: none; font-size: 12px; }
+  footer a:hover { text-decoration: underline; }
+  @media (max-width: 600px) {
+    .container { padding: 40px 16px 36px; }
+    header h1 { font-size: 24px; }
+    .card { padding: 16px 18px; }
+  }
+  .back { display: inline-block; color: var(--acc); margin-bottom: 32px; text-underline-offset: .25em; }
+  :focus-visible { outline: 2px solid var(--acc); outline-offset: 4px; }
