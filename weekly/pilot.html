@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="处理器架构与矢量设计周报试刊：RVV 与 CGRA、香山向量状态恢复、Arm/TSO 和矩阵运算专利。">
+<title>处理器架构与矢量设计周报 · 试刊号</title>
+<style>
+:root {
+  color-scheme: light;
+  --paper:#f7f6f0; --ink:#172822; --muted:#4c5f54; --accent:#135b42;
+  --line:#ccd5c8; --dark:#102922; --light:#f4f7ee;
+}
+* { box-sizing:border-box; }
+html { scroll-padding-top:1rem; }
+body { margin:0; background:var(--paper); color:var(--ink); font:1.05rem/1.8 "Source Sans 3", -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+a { color:var(--accent); text-underline-offset:.23em; }
+:focus-visible { outline:2px solid currentColor; outline-offset:4px; }
+.skip { position:absolute; left:.8rem; top:.8rem; z-index:1; background:var(--paper); padding:.35rem .65rem; transform:translateY(-180%); }
+.skip:focus { transform:translateY(0); }
+.masthead { background:var(--dark); color:var(--light); border-bottom:4px solid #62947b; }
+.masthead a { color:#c9e9d4; }
+.masthead-inner { width:min(70rem, calc(100% - 3rem)); margin:auto; padding:2rem 0 clamp(2.1rem,6vw,4.2rem); }
+.masthead nav { display:flex; flex-wrap:wrap; gap:.5rem 1.5rem; font-size:.95rem; }
+h1 { margin:clamp(1.55rem,4vw,2.8rem) 0 1rem; max-width:19ch; font-size:clamp(2rem,6vw,4.4rem); line-height:1.13; letter-spacing:-.025em; text-wrap:balance; }
+.issue { color:#d4ead7; font-size:1rem; font-variant-numeric:tabular-nums; }
+.issue p { margin:.35rem 0; max-width:55rem; }
+main { max-width:70rem; width:calc(100% - 3rem); margin:auto; padding:2rem 0 4rem; }
+.article { max-width:51rem; margin:0 auto; overflow-wrap:anywhere; }
+.toc { max-width:51rem; margin:0 auto 2.5rem; padding:1rem 0; border-bottom:1px solid var(--line); }
+.toc p { margin:0 0 .55rem; font-weight:650; }
+.toc ul { display:flex; flex-wrap:wrap; gap:.35rem 1.05rem; list-style:none; padding:0; margin:0; font-size:.95rem; }
+h2 { font-size:clamp(1.4rem,4vw,2rem); line-height:1.35; margin:2.9rem 0 1rem; padding-top:.85rem; border-top:1px solid var(--line); }
+h2:first-child { margin-top:0; padding-top:0; border:0; }
+h3 { font-size:clamp(1.12rem,2.6vw,1.44rem); line-height:1.45; margin:1.8rem 0 .4rem; }
+p { margin:.6rem 0 1.1rem; }
+h3 + p > em:only-child { display:block; font-style:normal; font-size:.95rem; color:var(--muted); line-height:1.5; }
+.article > ul, details ul { padding-left:1.4rem; }
+.article > ul:first-of-type { background:#e9efe7; padding:1rem 1.3rem 1rem 2.25rem; border-left:4px solid #3b7a5c; }
+li + li { margin-top:.4rem; }
+.toc li + li { margin-top:0; }
+code { font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:.9em; background:#e9ede6; padding:.08em .24em; border-radius:.2em; }
+.table-scroll { overflow-x:auto; margin:1.2rem 0; border:1px solid var(--line); border-radius:.5rem; }
+table { border-collapse:collapse; width:100%; min-width:36rem; font-size:.95rem; font-variant-numeric:tabular-nums; }
+th,td { padding:.65rem .75rem; text-align:left; border-bottom:1px solid var(--line); }
+th { background:#e1eade; }
+tr:last-child td { border-bottom:0; }
+details { padding:.65rem 1rem; border:1px solid var(--line); border-radius:.5rem; }
+summary { cursor:pointer; font-weight:650; color:var(--accent); }
+#appendix-search { margin-top:.8rem; }
+#appendix-search label { display:block; font-size:.95rem; }
+input { display:block; max-width:100%; font:inherit; color:var(--ink); padding:.3rem .55rem; background:white; border:1px solid #748577; border-radius:.25rem; }
+#appendix-status { font-size:.9rem; color:var(--muted); }
+[hidden] { display:none !important; }
+footer { border-top:1px solid var(--line); text-align:center; padding:1rem; }
+@media (max-width:40rem) {
+  main,.masthead-inner { width:calc(100% - 2rem); }
+  .masthead-inner { padding-top:1.4rem; }
+  body { font-size:1rem; }
+  h2 { margin-top:2.2rem; }
+}
+</style>
+  <meta name="vector-weekly-date" content="2026-11-17">
+  <meta name="vector-weekly-issue" content="pilot">
+  <meta name="vector-weekly-summary" content="富士通对照 RVV 与 CGRA 的非线性算子开销，香山修复向量状态恢复并共享 ROB 入队选择。">
+</head>
+<body>
+<a class="skip" href="#article">跳到正文</a>
+<header class="masthead">
+  <div class="masthead-inner">
+    <nav aria-label="站点导航"><a href="/">羟基太白</a><a href="/weekly/">往期周报</a></nav>
+    <h1>处理器架构与矢量设计周报</h1>
+    <div class="issue"><p><strong>试刊号 · 2026 年 11 月 17 日</strong></p>
+<p>覆盖窗口为北京时间 2026-11-10 21:57 至 2026-11-17 21:57，包含起点。检索于 11 月 17 日晚启动。试刊独立编号，正式周报另从第 001 期开始。</p></div>
+  </div>
+</header>
+<main>
+  <nav class="toc" aria-label="本期目录"><p>本期目录</p><ul>
+<li><a href="#本期重点">本期重点</a></li>
+<li><a href="#矢量与矩阵">矢量与矩阵</a></li>
+<li><a href="#通用处理器架构">通用处理器架构</a></li>
+<li><a href="#开源项目与规范">开源项目与规范</a></li>
+<li><a href="#专利">专利</a></li>
+<li><a href="#ai-工程实践">AI 工程实践</a></li>
+<li><a href="#来源与局限">来源与局限</a></li>
+<li><a href="#线索附录">线索附录</a></li>
+<li><a href="#厂商公开动态">厂商公开动态</a></li>
+</ul>
+</nav>
+  <article class="article" id="article"><h2 id="本期重点">本期重点</h2>
+<ul>
+<li><strong>同一套矩阵乘，非线性层仍有两种瓶颈。</strong> 富士通用相同的矩阵引擎比较 RVV 与粗粒度可重构阵列，SiLU 青睐流水数据流，Softmax 更依赖归约和片间交接。</li>
+<li><strong>向量恢复要等配置和异常状态同时可见。</strong> 香山昆明湖 v2 修复一次 <code>vsetvl</code> 刷新后译码早恢复一拍的问题；v3 的另一项改动则在 ROB bank 内共享入队选择器。</li>
+<li><strong>内存模型实测与仿真取样各有盲区。</strong> M1、M2 的混合 Arm/TSO 测试说明了可观测的顺序边界，SPEC CPU2026 评估则展示了阶段取样如何掩盖真实 CPI。</li>
+</ul>
+<h2 id="矢量与矩阵">矢量与矩阵</h2>
+<h3 id="simd-还是-cgra面向-ai-非线性函数的-rvv-与-cgra-soc-对照">SIMD 还是 CGRA？面向 AI 非线性函数的 RVV 与 CGRA SoC 对照</h3>
+<p><em>To SIMD or Not to SIMD: Comparing RVV vs. CGRA SoCs for Non-Linear Functions in AI</em></p>
+<p>Sameer Deshmukh、Naoya Mizuki、Takumi Honda（富士通）。arXiv:2611.12435 v1 在窗口前提交，纳入本期的是 SC26 H2RC 工作坊安排在北京时间 11 月 16 日 23:30 的报告。<a href="https://sc26.conference-program.com/presentation/?id=ws_h2rc103&amp;sess=sess139">会议议程</a> · <a href="https://arxiv.org/abs/2611.12435">预印本及 PDF</a> · <a href="https://arxiv.org/html/2611.12435v1">全文</a></p>
+<p>作者固定 Rocket 单核和 4×4 FP32 Gemmini 矩阵引擎，在 RTL 周期仿真里对照 Saturn RVV 与 4×4 PE 的弹性 RIKEN CGRA。连续逐元素执行的 SiLU 容易映射成阵列流水；Softmax 却需要先归约，再拿归约结果做归一化。这套 CGRA 实现还把求最大值和倒数留在 Rocket 上，阵列按暂存块重启两遍。长度 128 的行里，仿真记录的阵列 RUN 阶段为 40.62 周期/元素，含了重复送操作数和流水重启等代价。这个数只对应 RUN 阶段。<a href="https://arxiv.org/html/2611.12435v1">实验与代价分解，表 IV–V</a></p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="RVV 与 CGRA 周期仿真对照"><table>
+<thead>
+<tr>
+<th>负载</th>
+<th>周期数较少的一侧</th>
+<th style="text-align: right;">非线性内核最高加速比</th>
+<th style="text-align: right;">相应整块最高加速比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SiLU</td>
+<td>CGRA</td>
+<td style="text-align: right;">相对 RVV 约 7.12×</td>
+<td style="text-align: right;">SwiGLU 约 3.16×</td>
+</tr>
+<tr>
+<td>Softmax</td>
+<td>RVV</td>
+<td style="text-align: right;">相对 CGRA 约 9.8×</td>
+<td style="text-align: right;">Attention 约 4.24×</td>
+</tr>
+</tbody>
+</table></div>
+<p>加速比是作者在各自测试规模下报告的最大值，来自周期仿真。Saturn 的 VLEN 和寄存器到计算端口的数据通路分别配置为 128 位，LMUL=4 将四个架构寄存器成组；一条 <code>vle32.v</code> 可覆盖 16 个 FP32 元素，按四拍经过这条数据通路。对设计团队而言，可把问题拆成两组计数：一组是向量端口与流水占用，一组是归约屏障、暂存搬运和重启时间。已有数据无法推出两种方案的芯片面积、功耗或通用性能排序。<a href="https://arxiv.org/html/2611.12435v1">作者结果与配置</a></p>
+<h3 id="fp32-输入下-simd-数学库的函数级精度与性能评估">FP32 输入下 SIMD 数学库的函数级精度与性能评估</h3>
+<p><em>Evaluating Function-Level Accuracy and Performance of SIMD Math Libraries with FP32 Inputs</em></p>
+<p>Xingjian Qi、Robert Strzodka（海德堡大学），SC26 Correctness 工作坊，北京时间 11 月 17 日 00:45。作者用 256 位 MPFR 作高精度参照，穷举有限 binary32 编码，比对 AOCL-LibM、GNU libmvec、SLEEF 和 Intel SVML 的单输入 AVX2 数学函数。会议摘要指出，便宜的 SIMD 路径一般跑得快，触发昂贵修正的输入会改变与标量函数的速度排序。微基准可分开打常见输入、边界输入和混合向量，再记录触发慢路径的频率。这里以公开摘要和作者项目页为依据。<a href="https://sc26.conference-program.com/presentation/?id=ws_corr108&amp;sess=sess134">会议摘要</a> · <a href="https://asc.ziti.uni-heidelberg.de/projects/2026-PNRFC/">作者项目与代码入口</a></p>
+<h2 id="通用处理器架构">通用处理器架构</h2>
+<h3 id="apple-m-系列处理器是否满足-arm-与-tso-的复合内存模型">Apple M 系列处理器是否满足 Arm 与 TSO 的复合内存模型？</h3>
+<p><em>Do Apple M-Series Processors Enforce the Compound Memory Model? Sequential and Parallel Composition of Arm and TSO</em></p>
+<p>Vijay Nagarajan（犹他大学），arXiv:2611.21406 v1，北京时间 11 月 17 日首次提交。作者提出跨线程和线程内两层组合：共享内存的线程各自维持本模式要求的程序顺序；TSO 模式线程执行 Arm 指令时，则同时受其组合的顺序规则约束。作者在运行 Linux 的 M1 和 M2 上各执行 936 个 litmus test，每项重复 6 亿次。混合模式的 529 项中，模型禁止的 348 项目标结果均未观察到。论文还报告了比模型要求更强的实际顺序，以及延长运行后才观察到的允许结果。结论限于这两台机器和测试覆盖；Apple 未在该论文中公布实现机制。<a href="https://arxiv.org/html/2611.21406v1">预印本、PDF 和实验资料</a></p>
+<h3 id="显微镜下的-spec-cpu2026程序阶段与采样">显微镜下的 SPEC CPU2026：程序、阶段与采样</h3>
+<p><em>SPEC CPU2026 Under the Microscope: Programs, Phases, and Samples</em></p>
+<p>Peijun Li、Tianming Cui、Caiwen Ding、Yang Katie Zhao（明尼苏达大学双城分校），Pei-Hung Lin、Maya Gokhale（劳伦斯利弗莫尔国家实验室）。arXiv:2611.16376 v1，北京时间 11 月 12 日提交。作者对 90 个 SPECrate 输入按 10 毫秒采集 x86 实机计数器，并用全程结果评估取样。非平稳输入中，SimPoint 的个别误差达到 43%；论文用已测得的分段 CPI 做后验选点，展示了误差可降到约 2.6% 的诊断结果。验证预取器或 ROB 扩容收益时，可先按输入划分长期阶段，再检查选点、权重和暖机是否覆盖低频但高代价的阶段。后验选点依赖全程实测 CPI，新微架构仍需独立校验。<a href="https://arxiv.org/html/2611.16376v1">全文、署名与实验表</a></p>
+<h2 id="开源项目与规范">开源项目与规范</h2>
+<h3 id="香山等-vstart-可见后再恢复译码">香山：等 <code>vstart</code> 可见后再恢复译码</h3>
+<p>11 月 17 日合入昆明湖 v2。恢复路径上的 <code>vtype</code> 和 <code>vstart</code> 原本不在同一拍可见，后者还要经过 CSR 提交路径上的寄存器。补丁把 <code>vsetvl</code> 触发刷新后的译码恢复往后延一拍。回归可对照三个点：刷新发生、<code>vstart</code> 更新、第一条新向量指令被译码，并在重定向连续到达时检查旧状态是否泄漏。固定提交支持时序核对，公开资料没有给出吞吐影响。<a href="https://github.com/OpenXiangShan/XiangShan/commit/c95fe3f48312410138f5a48bfec55cb9cf26da8a">香山 PR #6983 的合入提交</a></p>
+<h3 id="香山将-rob-入队的数据选择移到-bank">香山：将 ROB 入队的数据选择移到 bank</h3>
+<p>11 月 16 日合入昆明湖 v3。原来的 ROB 入队头 µop 数据选择在每项重复；改动在 bank 内共享同一份选择结果，各 ROB 项仍单独产生写使能并受重定向控制。公开实现要求 bank 数为 2 的幂，且重命名宽度不超过 bank 数。在这些配置约束下，值得用综合分开量选择逻辑面积、共享网络扇出和路径延迟。合入说明没有量化 PPA。<a href="https://github.com/OpenXiangShan/XiangShan/commit/3614486179322ff060a532608b1e8341e9a929b0">香山 PR #6930 的合入提交</a></p>
+<h3 id="llvm让-arm-sve-结构化加载处理固定长向量去交错">LLVM：让 Arm SVE 结构化加载处理固定长向量去交错</h3>
+<p>北京时间 11 月 12 日合入 LLVM 主干。一些交错布局在内存中按通道轮流放元素，单次结构化加载可把不同通道分别送进向量。旧路径错过总宽度 64 位的固定长结果，新路径把固定长向量装进可伸缩容器，以谓词限制有效 lane，再转回固定长结果。8×i8 的回归用例要求出现 <code>ptrue … vl8</code> 和 <code>ld2b</code>、<code>ld3b</code> 或 <code>ld4b</code>。证据为指定配置下的汇编回归，未测硅片吞吐。<a href="https://github.com/llvm/llvm-project/commit/5b0dc777e90c28aeea139a2326a4c8bdc101102d">LLVM 合入差分</a></p>
+<h3 id="risc-v-规范与-gcc澄清原子性适用范围和混宽寄存器约束">RISC-V 规范与 GCC：澄清原子性适用范围和混宽寄存器约束</h3>
+<ul>
+<li><strong>Zama16b。</strong> 11 月 14 日合入 ISA 手册主干的改动将 MAG16 的要求对齐到同时可缓存且一致的主存。向量访存仍不在该 PMA 的原子性保证内。核对一致性或内存类型的测试用例时，应记录目标地址的属性。<a href="https://github.com/riscv/riscv-isa-manual/commit/21ee747cb7c0815a5f60daee3d13b83c9a468517">RISC-V ISA 手册提交</a></li>
+<li><strong>GCC RVV。</strong> 11 月 11 日进入 GCC 主干的 <code>r17-6133</code> 为 <code>vwadd[u].wv</code> 补上混宽源操作数的寄存器约束。该指令的 <code>vs2</code> 为 2×SEW，<code>vs1</code> 为 SEW；分配时要尊重双方占用的寄存器组。证据为上游差分与测试，适用范围是这条编译器主干修复。<a href="https://gnu.googlesource.com/gcc/+/2e046596d270a5c61b8a02e18e69211a04453d16">GCC 提交与补丁</a></li>
+</ul>
+<h2 id="专利">专利</h2>
+<h3 id="amd重用阵列做矩阵与向量乘积">AMD：重用阵列做矩阵与向量乘积</h3>
+<p><strong>US20260359386A1，Matrix Engine with Matrix and Vector Products。</strong> 申请人为 Advanced Micro Devices, Inc.，主张 2025-03-13 的美国临时申请优先权，2026-11-12 公开。权利要求 1–4 让指令控制行列输入选择，并允许单元结果寄存器回送到输入选择器；权利要求 6–9 覆盖随输入序列改变的操作。一个解释性例子是前一阶段的累积值进入结果寄存器，下一指令选择反馈作为一部分输入，其余值继续从行列入口进入。设计时可比较反馈增加的端口和时序代价，是否抵得过外部写回与再次读取的成本。公开申请的权利要求提供方案边界，未给出已实现产品或性能指标。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359386">USPTO 原件，权利要求第 16–17 页</a></p>
+<h3 id="qualcomm矩阵单元直接消费线性寄存器布局">Qualcomm：矩阵单元直接消费线性寄存器布局</h3>
+<p><strong>US20260359928A1，Techniques for Supporting Different Register Layouts in Graphics Processing Units (GPUs)。</strong> 申请人为 Qualcomm Incorporated，首页所示美国申请日为 2025-05-12，未列另行优先权，2026-11-12 公开。权利要求 1–3 允许按行或按列把矩阵放入通用寄存器，矩阵单元直接消费这种布局；权利要求 4–8 涉及编译选择和给后继向量指令的线性写回。例如，如果 GEMM 后马上做逐行激活，可让结果按行写回，给向量指令直接读取。这个例子用于解释数据流；是否获益取决于矩阵输入组织、访问端口和布局转换成本。本文只依据公开申请披露。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359928">USPTO 原件，权利要求第 21–22 页</a></p>
+<h2 id="ai-工程实践">AI 工程实践</h2>
+<h3 id="办公把两版公开材料整理成有出处的差异表">办公：把两版公开材料整理成有出处的差异表</h3>
+<p>给 AI 一页自构造的接口示意图和一张参数表，指定输出字段为「项目、两个值、各自页码或单元格、状态、人工判断」。要求模型逐条读取图和表，照录单位，无法定位时标「待核」。工程师抽查图注、合并单元格和单位换算，再确认哪些差异需要提交变更。这个流程是对 Google DeepMind 与 Artificial Analysis 的 MKA 多文件、多模态评估设计的本期迁移，未对具体模型做测评。<a href="https://blog.google/innovation-and-ai/models-and-research/gemini-models/multimodal-knowledge-agent-benchmark/">MKA 评估设计与公开样例入口</a></p>
+<h3 id="rtl把时序违例变成单一可验证的改动">RTL：把时序违例变成单一、可验证的改动</h3>
+<p>以会议展示的 AccelClosure 为例，输入 RTL、时序路径和功能测试结果，请 AI 提出一个局部改动以及对应的验收用例。公开案例用 Verilator 核对功能，Yosys 综合，OpenROAD 检验物理时序和面积。作者在 Sky130HD 的 8×8、signed INT8 权重驻留阵列上以 200 MHz 为目标，报告初始 setup slack −2.19 ns，以及布局布线后估计的最高频率 212 MHz。工程师需复核时钟约束并重复跑回归；例如 <code>valid=1, ready=0</code> 时下一拍仍应保持 <code>valid</code> 和 <code>payload</code>，并分别测试 reset、flush 的既定契约。频率是会议摘要中的估计，本文未复跑 EDA 流程。<a href="https://riscv.or.jp/en/risc-v-day-tokyo-2026-autumn-2/">东京 RISC-V Day 官方摘要</a></p>
+<h3 id="处理器架构比较两种向量写回组织">处理器架构：比较两种向量写回组织</h3>
+<p>给 AI 两组输入：同一组 64 位结果分条，以及两个 VRF bank、每 bank 每拍一写的约束。让 AI 输出逐拍授权、等待和分支清除后剩余队列；人工检查 scoreboard 唤醒和写回顺序。用自构造的待写序列 <code>B0:A, B0:B, B1:C, B1:D</code> 校核：只看队首连续项的共享 FIFO 需要 3 拍，允许两 bank 各自仲裁且已预装队列时需要 2 拍。这里用手算和简短队列模型复核，省略了写回总线、仲裁时序和预测失败带来的真实开销。实际选型前还需固定 VLEN、分条宽度、队列容量和每拍入队能力，再按不同 bank 冲突率比较。该案例借鉴了公开 ROB bank 复用讨论中的配置约束，测试对象为自构造的写回队列。<a href="https://github.com/OpenXiangShan/XiangShan/pull/6930">香山公开讨论</a></p>
+<h2 id="来源与局限">来源与局限</h2>
+<p>正文采用 SC26 与东京 RISC-V Day 公开日程、arXiv 原文、开源固定提交、USPTO A1 原件和厂商公告。会议议程及摘要支持报告内容和安排，独立复现仍取决于作者公开的原始数据和代码。开源条目按合入时间，专利按公开日期；美国公布日晚于北京时间的条目需额外核对。试刊覆盖已验证的选题，专利证据集中在 11 月 12 日 USPTO 申请公开。全球同族、当周授权和其他地区的覆盖有限。文中涉及硅片实测、RTL 周期仿真、布局布线估计及厂商峰值时均按来源口径表述。</p>
+<h2 id="线索附录">线索附录</h2>
+<details>
+<summary>展开补充线索</summary>
+<div id="appendix-search" hidden>
+  <label for="appendix-query">筛选补充线索</label>
+  <input type="search" id="appendix-query" autocomplete="off" placeholder="例如 LLVM">
+  <p id="appendix-status" role="status"></p>
+</div>
+<ul>
+<li><strong>RVV 数学函数接入 NumPy。</strong> <em>Accelerating NumPy’s Transcendental Functions on the RISC-V Vector Extension with SLEEF</em>。Masato Urushibara（N High School）与合作者 Ryotaro Ohara（署名单位待核实），11 月 11 日东京会场摘要。RVV 1.0 下将 FP64 三角和指数函数接入 SLEEF，报告相对传统 libm 的跨函数与平台几何均值为 1.68×，最大误差 1.0 ULP。SpacemiT A100 上几何均值 2.11×，cos 最高 4.19×。材料为公开日程摘要。<a href="https://riscv.or.jp/en/risc-v-day-tokyo-2026-autumn-2/">主办方摘要</a></li>
+<li><strong>LLVM 五路交错访存测试。</strong> 11 月 16 日合入新增的 LLVM IR 回归覆盖，适合检查非二次幂交错宽度；此变更只反映测试覆盖。<a href="https://github.com/llvm/llvm-project/pull/239573">LLVM PR #239573</a></li>
+<li><strong>Qualcomm 转置加载。</strong> US20260359927A1，Qualcomm Incorporated，2025-05-08 美国申请，首页未列另行优先权，2026-11-12 公开。转置加载在读入时把同一源向量的元素分配到不同执行线程的同号寄存器。它与前述线性布局申请是不同的披露，尚未核验同族或实现成本。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260359927">USPTO 原件</a></li>
+<li><strong>QEMU 矢量点积 RFC。</strong> 初版在实验窗口前；11 月 10 日 22:12 的邮件提供浮点转换交叉验证反馈，未给出测试规模，仍为 RFC 讨论。<a href="https://lore-kernel.gnuweeb.org/qemu-devel/20261110141239.46244-1-chao.liu@processmission.com/T/#u">公开邮件原文镜像</a></li>
+</ul>
+</details>
+<h2 id="厂商公开动态">厂商公开动态</h2>
+<ul>
+<li><strong>NVIDIA 在 SC26 推出 Vera CPU 机架方案。</strong> 11 月 16 日介绍的整机由 192 颗 Vera CPU 和 Quantum-X800 InfiniBand 组成；厂商给出的超过 200 TB/s 是机架聚合峰值内存带宽。气候或分子模拟移植评估还需拆开每节点带宽、NUMA、跨节点通信和应用实际访存。<a href="https://investor.nvidia.com/news/press-release-details/2026/NVIDIA-Expands-Vera-CPU-Platform-to-Accelerate-Scientific-Discovery/default.aspx">NVIDIA 公告</a></li>
+<li><strong>AMD 在 SC26 展示原生与模拟 FP64 的适用差异。</strong> 11 月 16 日的公告称分析了 11 个应用或基准中的 47 种负载配置；能否替换原生双精度取决于应用与数值条件。矩阵核移植时，可分别验算误差、回退比例和最终端到端时间。这里采用厂商公开的范围与结论。<a href="https://newsroom.amd.com/news/sc26-amd-expands-frontier-scientific-computing/">AMD SC26 公告</a></li>
+</ul></article>
+</main>
+<footer><a href="/weekly/">返回周报归档</a></footer>
+<script>
+  const search = document.getElementById('appendix-search');
+  const query = document.getElementById('appendix-query');
+  const status = document.getElementById('appendix-status');
+  const entries = Array.from(search.closest('details').querySelectorAll('li'));
+  search.hidden = false;
+  query.addEventListener('input', () => {
+    const term = query.value.trim().toLowerCase();
+    let shown = 0;
+    for (const entry of entries) {
+      entry.hidden = !entry.textContent.toLowerCase().includes(term);
+      if (!entry.hidden) shown += 1;
+    }
+    status.textContent = term ? '找到 ' + shown + ' 条' : '';
+  });
+</script>
+</body>
+</html>
