@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="处理器架构与矢量设计周报第 001 期。富士通的 RVV 与 CGRA 对照、香山向量状态恢复、Apple 内存序与 SPEC CPU2026 评估。">
+<meta name="description" content="处理器架构与矢量设计周报第 001 期。Zen 6 向量供数、富士通 RVV 与 CGRA 对照、香山向量状态恢复及 SPEC CPU2026 采样。">
 <title>处理器架构与矢量设计周报 · 第 001 期 · 试刊号</title>
 <style>
 :root {
@@ -152,6 +152,42 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 </ul>
 </nav>
   <article class="article" id="article"><h2 id="矢量与矩阵">矢量与矩阵</h2>
+<h3 id="zen-6扩充整数点积的同时让加载端供应更多独立操作数">Zen 6：扩充整数点积的同时，让加载端供应更多独立操作数</h3>
+<p>11 月 11 日，Chips and Cheese 发布对 AMD Zen 初代架构师 Mike Clark 的访谈。<a href="https://chipsandcheese.com/p/talking-zen-6-with-mike-clark-at">访谈原文</a></p>
+<p class="entry-text"><strong class="entry-label">问题</strong>　量化推理在循环里反复加载成组数据，再用 VNNI 做整数点积并累加。如果下一组操作数没就绪，或者所有迭代都依赖同一个累加器，增加点积流水线以后仍可能有空拍。</p>
+<p class="entry-text"><strong class="entry-label">方法</strong>　Zen 6 相对 Zen 5 增加两条 VNNI 流水线，加载端也能同时服务四个独立的 256 位向量加载。Clark 解释，Zen 5 已有服务两个 512 位加载所需的布线；把这组布线分开交给更多加载，控制会更复杂。</p>
+<p class="entry-text"><strong class="entry-label">披露的效果</strong>　两个 512 位加载与四个 256 位加载的总宽度相同，都是 1,024 位。差别在于同一时段能服务更多条独立加载。这个比较来自接口宽度和并行度，实际点积循环的吞吐仍需测量。</p>
+<p class="entry-text reuse-note"><strong class="entry-label">可借鉴</strong>　用同一条点积指令先做纯寄存器循环，把独立累加链加到吞吐饱和。然后加入独立加载，先让工作集命中 L1，再扩大到主要命中 L2，比较点积指令/周期、加载字节/周期和缓存事件。这样可以先找出扩大执行器还是改进供数更值得做。</p>
+<details class="article-detail">
+<summary>展开三组微基准与 L2 需求读、预取竞争</summary>
+<p class="table-hint">左右滑动查看完整表格</p><div class="table-scroll" tabindex="0" role="region" aria-label="Zen 6 点积微基准对照"><table>
+<thead>
+<tr>
+<th>测试</th>
+<th>改变的条件</th>
+<th>观察什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>纯寄存器点积</td>
+<td>扫独立累加链数量，固定指令宽度</td>
+<td>点积指令/周期何时停止增长</td>
+</tr>
+<tr>
+<td>L1 供数</td>
+<td>让操作数经加载到达，固定累加链数量</td>
+<td>与纯寄存器的差值，以及加载使用延迟和读吞吐</td>
+</tr>
+<tr>
+<td>L2 供数</td>
+<td>增大工作集，保持访存步长和指令序列</td>
+<td>缓存命中位置改变时，点积吞吐怎样变化</td>
+</tr>
+</tbody>
+</table></div>
+<p>这是建议的测试序列。跨平台对照时采用同一指令编码，保持对齐、绑核和测量方式一致，记录频率和重复结果。Clark 也提到，Zen 5 上命中 L2 的预取会占用需求读带宽，Zen 6 减少了这类竞争，设计目标是维持 <strong>64 B/周期</strong> 的 L2 读取能力。若寄存器和 L1 两组跟得上，进入 L2 后才变慢，可在可控的情况下比较不同预取设置，或用固定工作集对照规则与不规则步长。<a href="https://chipsandcheese.com/p/talking-zen-6-with-mike-clark-at">AMD 架构师访谈</a></p>
+</details>
 <h3 id="simd-还是-cgra面向-ai-非线性函数的-rvv-与-cgra-soc-对照">SIMD 还是 CGRA？面向 AI 非线性函数的 RVV 与 CGRA SoC 对照</h3>
 <p><em>To SIMD or Not to SIMD: Comparing RVV vs. CGRA SoCs for Non-Linear Functions in AI</em></p>
 <p>Sameer Deshmukh、Naoya Mizuki、Takumi Honda（富士通）。arXiv:2611.12435 v1 在窗口前提交，纳入本期的是 SC26 H2RC 工作坊安排在北京时间 11 月 16 日 23:30 的报告。<a href="https://sc26.conference-program.com/presentation/?id=ws_h2rc103&amp;sess=sess139">会议议程</a> · <a href="https://arxiv.org/abs/2611.12435">预印本及 PDF</a> · <a href="https://arxiv.org/html/2611.12435v1">全文</a></p>
@@ -248,8 +284,8 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 <p><em>SPEC CPU2026 Under the Microscope: Programs, Phases, and Samples</em></p>
 <p>Peijun Li、Tianming Cui、Caiwen Ding、Yang Katie Zhao（明尼苏达大学双城分校），Pei-Hung Lin、Maya Gokhale（劳伦斯利弗莫尔国家实验室）。arXiv:2611.16376 v1，北京时间 11 月 12 日提交。</p>
 <p class="entry-text"><strong class="entry-label">问题</strong>　SimPoint 找到走相似代码的区间，再取一个代表区间估计整段 CPI。指令路径相似时，如果缓存压力不同，代表点的速度仍可能失真。</p>
-<p class="entry-text"><strong class="entry-label">方法</strong>　作者比较 90 个 SPECrate 输入的采样结果与实机全程 CPI，再固定原聚类，用已经量到的区间 CPI 重选代表点，从而单独检查选点的影响。</p>
-<p class="entry-text"><strong class="entry-label">结果</strong>　非平稳输入的个别误差达 <strong>43%</strong>，重选后所有测试输入落在 <strong>2.6%</strong> 内。后者的前提是已经知道实机区间数据，适合用来定位误差来源。<a href="https://arxiv.org/html/2611.16376v1#S6.SS4">论文采样实验</a></p>
+<p class="entry-text"><strong class="entry-label">方法</strong>　作者在 Xeon 8480+ 上单核运行 SPECrate 的 90 个 ref 输入，用硬件计数器测全程 CPI。先对照 SimPoint 的默认估计，再固定原聚类，用已量到的区间 CPI 重选代表点，单独检查选点的影响。<a href="https://arxiv.org/html/2611.16376v1#S3">实验平台与测量方法</a></p>
+<p class="entry-text"><strong class="entry-label">结果</strong>　以实机全程 CPI 为基线，非平稳输入的个别采样误差达 <strong>43%</strong>。保留原聚类、用实机区间 CPI 重选代表点后，90 个测试输入的全程 CPI 估计误差均在 <strong>2.6%</strong> 内。这个重选实验依赖预先测到的区间 CPI，用来判断误差有多少来自选点。<a href="https://arxiv.org/html/2611.16376v1#S6.SS4">论文采样实验</a></p>
 <p class="entry-text reuse-note"><strong class="entry-label">可借鉴</strong>　评估预取器、缓存或 ROB 扩容的小幅收益时，固定输入与权重，先看结果在多个种子、选点和暖机长度下是否稳定。若选点差异与收益同量级，先补测短时慢阶段。</p>
 <details class="article-detail">
 <summary>复核采样口径、随机种子和 CPython 例子</summary>
@@ -284,7 +320,7 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 <h3 id="llvm让-arm-sve-结构化加载处理固定长向量去交错">LLVM：让 Arm SVE 结构化加载处理固定长向量去交错</h3>
 <p>北京时间 11 月 12 日合入 LLVM 主干。</p>
 <p class="entry-text"><strong class="entry-label">问题</strong>　内存里排的是 <code>A0, B0, A1, B1</code>，消费者要分别拿 A、B。旧后端在总宽度 64 位的固定长结果上漏了加载与去交错的合并。</p>
-<p class="entry-text"><strong class="entry-label">方法</strong>　后端用可伸缩向量容器承载固定长结果，再用谓词只激活需要的 lane。一次 SVE 结构化加载分出各通道，结果裁回原长度。</p>
+<p class="entry-text"><strong class="entry-label">方法</strong>　当目标选择用 SVE 实现固定长向量时，后端用可伸缩向量容器承载结果，再用谓词只激活需要的 lane。一次 SVE 结构化加载分出各通道，结果裁回原长度。这次合入的路径跳过已有掩码的加载。</p>
 <p class="entry-text"><strong class="entry-label">结果</strong>　汇编回归在指定的 streaming-compatible 配置下检查 8×i8 用例应生成 <code>ptrue … vl8</code> 和相应的 <code>ld2b</code>、<code>ld3b</code> 或 <code>ld4b</code>。这里核对的是指令选择，芯片吞吐需另测。<a href="https://github.com/llvm/llvm-project/blob/5b0dc777e90c28aeea139a2326a4c8bdc101102d/llvm/test/CodeGen/AArch64/sve-fixed-vector-interleave.ll#L1-L48">LLVM 回归用例</a></p>
 <p class="entry-text reuse-note"><strong class="entry-label">可借鉴</strong>　验证先给每个通道填可辨认标签，再扫向量长度和边界。评估收益则用同一批数据对比合并前后的每元素周期与访存流量。</p>
 <details class="article-detail">
@@ -385,7 +421,7 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 </table></div>
 <p class="entry-text reuse-note"><strong class="entry-label">可借鉴</strong>　给微基准分别喂均匀流量和热点 bank 流量，固定入口带宽、VLEN 和深度。除了延迟分布，再查被分支清除的请求是否还能唤醒 scoreboard。<a href="https://github.com/OpenXiangShan/XiangShan/pull/6930">相关 bank 复用讨论</a></p>
 <h2 id="来源与局限">来源与局限</h2>
-<p>转载图来自 Deshmukh、Mizuki、Honda 的 <a href="https://arxiv.org/html/2611.12435v1">arXiv v1</a>，原文标注 © 2026 IEEE 和 <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>。图片仅转换格式，保留原图标注和数据，中文图注为本刊解读。正文采用 SC26 与东京 RISC-V Day 公开日程、arXiv 原文、开源固定提交、USPTO A1 原件和厂商公告。会议议程及摘要支持报告内容和安排，独立复现仍取决于作者公开的原始数据和代码。开源条目按合入时间，专利按公开日期；美国公布日晚于北京时间的条目需额外核对。试刊覆盖已验证的选题，专利证据集中在 11 月 12 日 USPTO 申请公开。全球同族、当周授权和其他地区的覆盖有限。文中涉及硅片实测、RTL 周期仿真、布局布线估计及厂商峰值时均按来源口径表述。</p>
+<p>转载图来自 Deshmukh、Mizuki、Honda 的 <a href="https://arxiv.org/html/2611.12435v1">arXiv v1</a>，原文标注 © 2026 IEEE 和 <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>。图片仅转换格式，保留原图标注和数据，中文图注为本刊解读。正文采用 SC26 与东京 RISC-V Day 公开日程、arXiv 原文、开源固定提交、USPTO A1 原件、架构师访谈和厂商测试简报。会议议程及摘要支持报告内容和安排，独立复现仍取决于作者公开的原始数据和代码。开源条目按合入时间，专利按公开日期；美国公布日晚于北京时间的条目需额外核对。试刊覆盖已验证的选题，专利证据集中在 11 月 12 日 USPTO 申请公开。全球同族、当周授权和其他地区的覆盖有限。文中涉及硅片实测、RTL 周期仿真、布局布线估计及厂商峰值时均按来源口径表述。</p>
 <h2 id="线索附录">线索附录</h2>
 <details>
 <summary>展开补充线索</summary>
@@ -406,18 +442,16 @@ input { display: block; max-width: 100%; padding: .3rem .55rem; font: inherit; c
 <p>NVIDIA 于 11 月 16 日在 SC26 公开方案。</p>
 <p class="entry-text"><strong class="entry-label">问题</strong>　科学计算扩到多节点后，要同时搬本地内存的数据并等待跨节点交换。内存与通信负担可能分别限制进度。</p>
 <p class="entry-text"><strong class="entry-label">方法</strong>　Vera 液冷机架把 192 颗 CPU、高带宽内存和 Quantum-X800 InfiniBand 集成起来，部分集合通信可交给网络处理。<a href="https://nvidianews.nvidia.com/news/nvidia-expands-vera-cpu-platform-to-accelerate-scientific-discovery">NVIDIA SC26 公告</a></p>
-<p class="entry-text"><strong class="entry-label">公开结果</strong>　机架聚合峰值内存带宽超过 200 TB/s。厂商在 OpenFOAM motorBike Large 上报告相对其 x86 对照 1.9× 性能、2.4× 每瓦性能。</p>
+<p class="entry-text"><strong class="entry-label">公开结果</strong>　192 颗 CPU 的机架聚合峰值内存带宽超过 <strong>200 TB/s</strong>。NVIDIA 的 OpenFOAM v2606 测试用 motorBike Large 网格，对照双路 AMD EPYC 9755，报告 Vera 达到 <strong>1.9× 性能</strong>和 <strong>2.4× 每瓦性能</strong>。两组数字分别来自机架配置与双路系统测试。</p>
 <p class="entry-text reuse-note"><strong class="entry-label">可借鉴</strong>　同一网格与求解条件下，按单插槽、多插槽、多节点逐级量，依次看本地带宽、NUMA 和集合通信各耗时多少。</p>
 <details class="article-detail">
 <summary>展开单颗 CPU 参数与比较口径</summary>
-<p>每颗 Vera CPU 有 88 个 Olympus 核心，公告给出的内存最高带宽为 1.2 TB/s。机架的 200 TB/s 是聚合峰值；OpenFOAM 比值限于厂商测试工作负载及对照系统。气候模型估计对应另一组条件。<a href="https://nvidianews.nvidia.com/news/nvidia-expands-vera-cpu-platform-to-accelerate-scientific-discovery">厂商的平台与测试说明</a></p>
+<p>OpenFOAM 对照两边均为双路系统，均使用 GCC 16.2。Vera 的每颗 CPU 有 88 核，配 LPDDR5X-9600；EPYC 9755 每颗 128 核，配 DDR5-6400。比较时核心数和内存系统都不同，这组结果反映整机配置在指定网格上的差异。测试简报第 10–11 页为负载及结果，第 23 页为平台与软件版本。<a href="https://dam-cdn.nvd.orangelogic.com/AssetLink/b8ip35u047q24s1600wns7rtilf0qcru.pdf#page=10">OpenFOAM 结果</a> · <a href="https://dam-cdn.nvd.orangelogic.com/AssetLink/b8ip35u047q24s1600wns7rtilf0qcru.pdf#page=23">测试配置</a></p>
 </details>
-<h3 id="amd比较原生-fp64-与低精度路径模拟-fp64">AMD：比较原生 FP64 与低精度路径模拟 FP64</h3>
-<p>AMD 于 11 月 16 日在 SC26 公告中介绍其负载评估。</p>
-<p class="entry-text"><strong class="entry-label">问题</strong>　用低精度路径模拟 FP64 时，矩阵乘可能更快，但拆分、重组、回退和额外迭代都可能把收益吃掉。</p>
-<p class="entry-text"><strong class="entry-label">方法</strong>　AMD 在 11 个应用或基准的 47 种配置里比较原生与模拟 FP64 的适用情况。<a href="https://newsroom.amd.com/news/sc26-amd-expands-frontier-scientific-computing/">AMD SC26 公告</a></p>
-<p class="entry-text"><strong class="entry-label">公开结果</strong>　厂商指出部分科学负载仍仰赖原生 FP64。公告给出了覆盖范围，具体收益取决于负载和数值要求。</p>
-<p class="entry-text reuse-note"><strong class="entry-label">可借鉴</strong>　迁移时用同一收敛准则，分别记录算子时间、残差、迭代次数、回退比例和端到端时间。矩阵核变快之后，再检查整个求解是否也提前完成。</p></article>
+<details class="article-detail">
+<summary>AMD 补充线索：原生与模拟 FP64 的负载评估</summary>
+<p>AMD 在 11 月 16 日的 SC26 公告中提到，比较覆盖 11 个应用或基准的 47 种配置，部分科学负载仍需原生 FP64。当前公开公告提供的是测试范围和厂商判断。若要评估低精度模拟路径，可固定收敛准则，再分别量算子时间、残差、迭代次数、回退比例和端到端时间，找出拆分与重组在哪些负载会抵消核内的收益。<a href="https://newsroom.amd.com/news/sc26-amd-expands-frontier-scientific-computing/">AMD SC26 公告</a></p>
+</details></article>
 </main>
 <footer class="footer"><div class="wrap"><span>处理器架构与矢量设计周报</span><a href="/weekly/">返回周报归档 ↑</a></div></footer>
 <script>
