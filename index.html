@@ -190,6 +190,7 @@
     .text-link:hover { text-decoration-color: currentColor; }
     .archive-link { margin-top: .55rem; }
     .guestbook-link { margin-top: .4rem; }
+    #guestbook .giscus { margin-top: 1.25rem; }
 
     @media (prefers-reduced-motion: no-preference) {
       .hero { animation: enter 460ms ease-out both; }
@@ -257,8 +258,23 @@
     <section class="section" id="guestbook" aria-labelledby="guestbook-title">
       <h2 id="guestbook-title">留言板</h2>
       <div class="section-body">
-        <p class="summary">欢迎聊聊周刊或推荐选题。登录 GitHub 后可以公开留言和回复。</p>
-        <a class="text-link guestbook-link" href="https://github.com/qiangjitaibai/qiangjitaibai.github.io/discussions/1">前往留言 <span aria-hidden="true">↗</span></a>
+        <p class="summary">欢迎聊聊周刊或推荐选题。留言公开可见。</p>
+        <div class="giscus" id="guestbook-comments"></div>
+        <script src="https://giscus.app/client.js"
+                data-repo="qiangjitaibai/qiangjitaibai.github.io"
+                data-repo-id="MDEwOlJlcG9zaXRvcnkzNDYyMDU0OTc="
+                data-category="General"
+                data-category-id="DIC_kwDOFKKtOc4DLYLU"
+                data-mapping="number"
+                data-term="1"
+                data-reactions-enabled="0"
+                data-input-position="top"
+                data-theme="noborder_light"
+                data-lang="zh-CN"
+                data-loading="lazy"
+                crossorigin="anonymous"
+                async></script>
+        <a class="text-link guestbook-link" href="https://github.com/qiangjitaibai/qiangjitaibai.github.io/discussions/1">在 GitHub 查看 <span aria-hidden="true">↗</span></a>
       </div>
     </section>
   </main>
