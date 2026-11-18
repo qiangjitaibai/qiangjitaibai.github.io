@@ -3,39 +3,337 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f3eb">
   <meta name="description" content="处理器架构与矢量设计周刊往期归档">
-  <title>处理器架构与矢量设计周刊 · 羟基太白</title>
+  <title>往期周刊 · 处理器架构与矢量设计周刊</title>
   <style>
-    :root { color-scheme: dark; --bg: #0a0a0f; --panel: #12121a; --line: #292b3b; --fg: #f5f5f9; --muted: #a9adc2; --accent: #a5c8ff; }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--fg); font: 1rem/1.65 Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
-    main { width: min(51rem, calc(100% - 2.5rem)); margin: auto; padding: clamp(2.5rem, 8vw, 5.5rem) 0; }
-    a { color: var(--accent); text-underline-offset: .2em; }
-    a:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; }
-    nav { font-size: .9rem; }
-    h1 { font-size: clamp(1.9rem, 6vw, 3.5rem); line-height: 1.18; margin: 2rem 0 .7rem; text-wrap: balance; }
-    h2 { font-size: 1.2rem; letter-spacing: .02em; margin: 0 0 .9rem; }
-    h3 { font-size: 1rem; color: var(--muted); margin: 1.8rem 0 .4rem; }
-    p { margin: 0; color: var(--muted); }
-    section { margin-top: clamp(2.3rem, 6vw, 3.3rem); }
-    .featured, .empty { border: 1px solid var(--line); background: var(--panel); padding: clamp(1.2rem, 4vw, 1.8rem); border-radius: .8rem; }
-    .featured a { font-size: 1.2rem; font-weight: 650; }
-    .featured p { margin-top: .6rem; }
-    ul { list-style: none; margin: 0; padding: 0; }
-    li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .35rem 1rem; padding: .85rem 0; border-bottom: 1px solid var(--line); }
-    time { color: var(--muted); font-variant-numeric: tabular-nums; }
+:root {
+  color-scheme: light;
+  --paper: #f5f3eb;
+  --ink: #1f2a23;
+  --muted: #515c50;
+  --accent: #315841;
+  --rule: #cdd0c2;
+  --rule-soft: #dcdfd2;
+  --wash: #ecefe4;
+  --surface: #faf8f1;
+  --title-font: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", SimSun, serif;
+  --text-font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono-font: "IBM Plex Mono", SFMono-Regular, ui-monospace, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1rem/1.7 var(--text-font);
+}
+
+a { color: var(--accent); text-underline-offset: .25em; }
+a:hover { text-decoration-thickness: .11em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+[hidden] { display: none !important; }
+
+.wrap { width: min(69rem, calc(100% - clamp(2.5rem, 10vw, 9.5rem))); margin-inline: auto; }
+.skip {
+  position: absolute;
+  inset: .75rem auto auto .75rem;
+  z-index: 3;
+  padding: .5rem 1rem;
+  background: var(--paper);
+  transform: translateY(-200%);
+}
+.skip:focus { transform: none; }
+
+.masthead {
+  min-height: clamp(4rem, 7vw, 5.5rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.wordmark, .masthead nav a { display: inline-flex; align-items: center; min-height: 44px; }
+.wordmark { gap: .6rem; color: var(--ink); font-size: 1.1rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
+.wordmark::before { content: ""; flex: none; width: .68rem; height: .68rem; background: var(--accent); }
+.masthead nav a { gap: .5em; color: var(--muted); font-size: .9rem; text-decoration-color: transparent; }
+.wordmark:hover, .masthead nav a:hover { color: var(--accent); text-decoration: underline; }
+
+.issue-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, .43fr);
+  align-items: end;
+  gap: 1.25rem clamp(1.5rem, 7vw, 6.25rem);
+  padding-block: clamp(2.25rem, 5.2vw, 4.65rem) clamp(1.75rem, 4vw, 3.1rem);
+  border-bottom: 1px solid var(--rule);
+}
+
+.issue-heading h1, .archive-heading h1 {
+  margin: 0;
+  font: 700 clamp(2.25rem, 5vw, 4.35rem)/1.13 var(--title-font);
+  letter-spacing: -.035em;
+}
+
+.issue-heading h1 span { display: block; }
+.issue-meta { padding-top: .82rem; border-top: 1px solid var(--accent); font-variant-numeric: tabular-nums; }
+.issue-label { margin: 0 0 .45rem; color: var(--accent); font-size: .91rem; font-weight: 680; }
+.window { color: var(--muted); font-size: .9rem; line-height: 1.62; }
+.window p { margin: 0; }
+.window .coverage { margin: .12rem 0; color: var(--ink); }
+.window time { white-space: nowrap; }
+
+.layout, .archive main > section {
+  display: grid;
+  grid-template-columns: minmax(10rem, .27fr) minmax(0, 1fr);
+  gap: 1rem clamp(1.4rem, 5vw, 4rem);
+  align-items: start;
+}
+.layout { padding-block: clamp(1.6rem, 4vw, 3.25rem) clamp(2.5rem, 7vw, 6rem); }
+
+.contents { position: sticky; top: 1.25rem; align-self: start; }
+.contents p { margin: 0 0 .48rem; color: var(--muted); font-size: .86rem; font-weight: 650; }
+.contents ul { margin: 0; padding: 0; border-left: 1px solid var(--rule); list-style: none; }
+.contents a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: .4rem .65rem .4rem .95rem;
+  border-left: 2px solid transparent;
+  margin-left: -1px;
+  color: var(--muted);
+  font-size: .94rem;
+  line-height: 1.35;
+  text-decoration: none;
+}
+.contents a:hover, .contents a[aria-current] { background: var(--wash); color: var(--accent); }
+.contents a[aria-current] { border-color: var(--accent); font-weight: 650; }
+
+.article {
+  min-width: 0;
+  margin: 0;
+  font-size: 1.063rem;
+  line-height: 1.84;
+  overflow-wrap: anywhere;
+}
+.article h2 {
+  margin: clamp(2.7rem, 7vw, 5rem) 0 1.3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  font: 700 clamp(1.8rem, 3.1vw, 2.5rem)/1.28 var(--title-font);
+  letter-spacing: -.02em;
+  scroll-margin-top: 1.3rem;
+}
+.article h2:first-child { margin-top: 0; padding-top: 0; border: 0; }
+.article h3 {
+  margin: 2rem 0 .5rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--rule-soft);
+  font: 680 clamp(1.3rem, 2.15vw, 1.67rem)/1.44 var(--text-font);
+  text-wrap: pretty;
+}
+.article h2 + h3 { margin-top: 0; padding-top: 0; border: 0; }
+.article h4 { margin: 1.25rem 0 .4rem; color: var(--accent); font-size: 1.06rem; }
+.article p { max-width: 46rem; margin: .65rem 0 1.05rem; }
+.article h3 + p { color: var(--muted); font-size: .94rem; line-height: 1.7; }
+.article h3 + p > em:only-child { font-style: normal; }
+.article strong { color: var(--ink); }
+.article .entry-label { color: var(--accent); font-size: .95em; font-weight: 750; white-space: nowrap; }
+.article .reuse-note { padding: .68rem .95rem; border-left: 2px solid #759078; background: var(--wash); }
+.article li + li { margin-top: .52rem; }
+.article ul { padding-inline-start: 1.35rem; }
+.article blockquote {
+  max-width: 46rem;
+  margin: 1rem 0;
+  padding: .55rem .95rem;
+  border-left: 2px solid #759078;
+  color: var(--muted);
+}
+.article blockquote p { margin: .15rem 0; }
+code { padding: .08em .23em; background: var(--wash); color: var(--accent); font: .9em var(--mono-font); }
+
+.article details {
+  margin: .8rem 0 1.35rem;
+  border-block: 1px solid var(--rule);
+  background: var(--surface);
+}
+.article details[open] { padding: 0 .85rem .8rem; }
+.article summary {
+  min-height: 44px;
+  padding: .55rem .85rem;
+  color: var(--accent);
+  font-size: .94rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.article summary:hover { background: var(--wash); }
+.article details[open] > summary { margin: 0 -.85rem .75rem; border-bottom: 1px solid var(--rule); }
+.article details > p:last-child { margin-bottom: 0; }
+#appendix-search { margin-block: .85rem .45rem; }
+#appendix-search label { font-size: .94rem; }
+#appendix-search input {
+  display: block;
+  width: min(100%, 22rem);
+  min-height: 44px;
+  margin-top: .18rem;
+  padding: .35rem .6rem;
+  border: 1px solid #7c8c78;
+  border-radius: .24rem;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+#appendix-status { margin: .2rem 0 0; color: var(--muted); font-size: .875rem; }
+
+.table-hint { display: none; }
+.table-scroll { max-width: 100%; margin: .8rem 0 1.3rem; overflow-x: auto; border: 1px solid var(--rule); }
+table { width: 100%; min-width: 33rem; border-collapse: collapse; font-size: .93rem; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.table-scroll.compact table { min-width: 19rem; }
+th, td { padding: .55rem .65rem; border-bottom: 1px solid var(--rule-soft); text-align: left; }
+th { background: var(--wash); color: var(--accent); font-weight: 700; }
+tbody tr:nth-child(even) { background: #f5f5ec; }
+tr:last-child td { border-bottom: none; }
+
+.figure-pair, .litmus-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; }
+.figure-pair { margin: 1rem 0 1.4rem; }
+.source-figure { min-width: 0; margin: 0; padding: .65rem; border: 1px solid var(--rule); background: var(--surface); }
+.source-figure > p, .source-figure figcaption p { margin: 0; }
+.source-figure figcaption { margin: .65rem .15rem .12rem; color: var(--muted); font-size: .9rem; line-height: 1.65; }
+.open-figure { display: block; background: white; }
+.open-figure:hover { outline: 1px solid var(--accent); }
+.source-figure img { display: block; width: 100%; height: auto; }
+.chart-figure { max-width: 41rem; margin: .9rem 0 1.35rem; }
+
+.litmus-figure { margin: 1.1rem 0 1.4rem; padding: .7rem .85rem; scroll-margin-top: 1rem; }
+.litmus-panel { min-width: 0; table-layout: fixed; }
+.litmus-panel caption { padding: .4rem .15rem; color: var(--ink); text-align: left; font-weight: 740; }
+.litmus-panel th, .litmus-panel td { padding: .48rem .58rem; }
+.litmus-panel th.arm { background: #e3edf4; color: #284b63; }
+.litmus-panel th.tso { background: #f3ead9; color: #5a4324; }
+.litmus-panel code { padding: 0; background: transparent; color: var(--ink); white-space: nowrap; }
+.litmus-outcome { background: var(--wash); }
+.litmus-figure figcaption { margin-top: .7rem; padding-top: .65rem; border-top: 1px solid var(--rule); }
+
+.footer .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .25rem 1.5rem;
+  padding-block: .8rem 1.55rem;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: .9rem;
+}
+.footer a { display: inline-flex; align-items: center; min-height: 44px; }
+
+.archive main { padding-bottom: clamp(3rem, 8vw, 6rem); }
+.archive-heading { padding-block: clamp(2.4rem, 7.6vw, 6.6rem) clamp(1.9rem, 5.5vw, 4.75rem); }
+.archive-heading p { margin: .85rem 0 0; color: var(--muted); }
+.archive main > section { padding-block: clamp(1.6rem, 4vw, 3rem); border-top: 1px solid var(--rule); }
+.archive h2 { margin: 0; font: 700 1.45rem/1.4 var(--title-font); }
+.archive h3 { color: var(--muted); margin: 1.15rem 0 .2rem; font-size: 1rem; }
+.archive h3:first-child { margin-top: 0; }
+.archive .edition { margin: 0; font: 700 clamp(1.35rem, 3vw, 2.1rem)/1.35 var(--title-font); }
+.archive time { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.archive .edition time { color: inherit; }
+.archive .summary { max-width: 40rem; color: var(--muted); margin: .72rem 0 0; }
+.archive .read {
+  display: inline-flex;
+  align-items: center;
+  gap: .6em;
+  min-height: 44px;
+  margin-top: .95rem;
+  padding: .45rem .88rem;
+  border-radius: .24rem;
+  background: var(--accent);
+  color: white;
+  font-weight: 650;
+  text-decoration: none;
+}
+.archive .read:hover { background: #244431; }
+.archive .read:active { background: #1d3527; }
+.archive .issue-list { margin: 0; padding: 0; list-style: none; }
+.archive .issue-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .15rem 1rem;
+  min-height: 44px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.archive .issue-list a { display: inline-flex; align-items: center; min-height: 44px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-enter] { animation: appear 420ms ease-out both; }
+  .contents a, .archive .read { transition: background-color 150ms ease, color 150ms ease; }
+  @keyframes appear {
+    from { opacity: .76; transform: translateY(5px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+@media (max-width: 51rem) {
+  .layout { display: block; }
+  .contents { position: static; margin-bottom: 1.65rem; padding-bottom: .7rem; border-bottom: 1px solid var(--rule); }
+  .contents ul { display: flex; flex-wrap: wrap; gap: 0 .32rem; border-left: 0; }
+  .contents a { margin-left: 0; padding-inline: .5rem; }
+}
+
+@media (max-width: 42rem) {
+  .issue-heading { grid-template-columns: 1fr; gap: 1.15rem; }
+  .issue-heading h1, .archive-heading h1 { font-size: clamp(2.2rem, 8.7vw, 3.55rem); }
+  .issue-meta { padding-top: .66rem; border-color: var(--rule); }
+  .issue-label { margin-bottom: .2rem; }
+  .article { font-size: 1rem; line-height: 1.8; }
+  .contents ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .contents a { font-size: .84rem; }
+  .figure-pair, .litmus-pair { grid-template-columns: minmax(0, 1fr); }
+  .table-hint:not(.compact) { display: block; margin: .65rem 0 .2rem; color: var(--muted); font-size: .84rem; }
+  .table-scroll { margin-top: .2rem; }
+  .archive main > section { grid-template-columns: 1fr; gap: .65rem; }
+}
+
+@media (max-width: 23rem) {
+  .wordmark { font-size: 1rem; }
+  .contents ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .table-hint.compact { display: block; margin: .65rem 0 .2rem; color: var(--muted); font-size: .84rem; }
+  .litmus-figure { padding-inline: .52rem; }
+  .litmus-panel th, .litmus-panel td { padding-inline: .4rem; }
+}
+
+@media print {
+  :root { --paper: white; --ink: black; --muted: #333; }
+  .skip, .masthead, .contents, .footer, #appendix-search, .table-hint { display: none; }
+  .wrap { width: 100%; }
+  .issue-heading, .layout { display: block; padding-block: .5rem 1rem; }
+  .issue-heading h1 span { display: inline; }
+  .issue-meta { margin-top: .6rem; }
+  h2, h3, caption, summary { break-after: avoid; }
+  figure, tr { break-inside: avoid; }
+  .table-scroll { overflow: visible; }
+  table, .table-scroll.compact table { min-width: 0; }
+}
+
   </style>
 </head>
-<body>
-  <main>
-    <nav aria-label="站点导航"><a href="/">← 羟基太白的个人主页</a></nav>
-    <header>
-      <h1>处理器架构与矢量设计周刊</h1>
-      <p>论文、开源项目、架构规范、专利与 AI 工程实践。</p>
+<body class="archive">
+  <a class="skip" href="#archive-main">跳至往期周刊</a>
+  <header class="wrap masthead">
+    <a class="wordmark" href="/">羟基太白</a>
+  </header>
+  <main class="wrap" id="archive-main" tabindex="-1">
+    <header class="archive-heading" data-enter>
+      <h1>往期周刊</h1>
+      <p>处理器架构与矢量设计周刊</p>
     </header>
     <section aria-labelledby="latest"><h2 id="latest">最新一期</h2>
-      <div class="featured">
-        <a href="pilot.html">第 001 期 · 试刊号 · 2026-11-17</a>
+      <div>
+        <p class="edition">第 001 期 · 试刊号 · <time datetime="2026-11-17">2026-11-17</time></p>
+        <a class="read" href="pilot.html">阅读本期 <span aria-hidden="true">↗</span></a>
       </div>
     </section>
   </main>
