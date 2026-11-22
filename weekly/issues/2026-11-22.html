@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f3eb">
+  <meta name="description" content="稀疏阵列供数、页表缓存压缩、异常重启与跨页存储保护，以及 AI 设计的时序验证。">
+  <title>第 002 期 · 处理器架构与矢量设计周刊</title>
+  <style>
+:root {
+  color-scheme: light;
+  --paper: #f5f3eb;
+  --ink: #1f2a23;
+  --muted: #515c50;
+  --accent: #315841;
+  --rule: #cdd0c2;
+  --rule-soft: #dcdfd2;
+  --wash: #ecefe4;
+  --surface: #faf8f1;
+  --title-font: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", SimSun, serif;
+  --text-font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono-font: "IBM Plex Mono", SFMono-Regular, ui-monospace, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1rem/1.7 var(--text-font);
+}
+
+a { color: var(--accent); text-underline-offset: .25em; }
+a:hover { text-decoration-thickness: .11em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+[hidden] { display: none !important; }
+
+.wrap { width: min(69rem, calc(100% - clamp(2.5rem, 10vw, 9.5rem))); margin-inline: auto; }
+.skip {
+  position: absolute;
+  inset: .75rem auto auto .75rem;
+  z-index: 3;
+  padding: .5rem 1rem;
+  background: var(--paper);
+  transform: translateY(-200%);
+}
+.skip:focus { transform: none; }
+
+.masthead {
+  min-height: clamp(4rem, 7vw, 5.5rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.wordmark, .masthead nav a { display: inline-flex; align-items: center; min-height: 44px; }
+.wordmark { gap: .6rem; color: var(--ink); font-size: 1.1rem; font-weight: 750; text-decoration: none; white-space: nowrap; }
+.wordmark::before { content: ""; flex: none; width: .68rem; height: .68rem; background: var(--accent); }
+.masthead nav a { gap: .5em; color: var(--muted); font-size: .9rem; text-decoration-color: transparent; }
+.wordmark:hover, .masthead nav a:hover { color: var(--accent); text-decoration: underline; }
+
+.issue-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, .43fr);
+  align-items: end;
+  gap: 1.25rem clamp(1.5rem, 7vw, 6.25rem);
+  padding-block: clamp(2.25rem, 5.2vw, 4.65rem) clamp(1.75rem, 4vw, 3.1rem);
+  border-bottom: 1px solid var(--rule);
+}
+
+.issue-heading h1, .archive-heading h1 {
+  margin: 0;
+  font: 700 clamp(2.25rem, 5vw, 4.35rem)/1.13 var(--title-font);
+  letter-spacing: -.035em;
+}
+
+.issue-heading h1 span { display: block; }
+.issue-meta { padding-top: .82rem; border-top: 1px solid var(--accent); font-variant-numeric: tabular-nums; }
+.issue-label { margin: 0 0 .45rem; color: var(--accent); font-size: .91rem; font-weight: 680; }
+.window { color: var(--muted); font-size: .9rem; line-height: 1.62; }
+.window p { margin: 0; }
+.window .coverage { margin: .12rem 0; color: var(--ink); }
+.window time { white-space: nowrap; }
+
+.layout, .archive main > section {
+  display: grid;
+  grid-template-columns: minmax(10rem, .27fr) minmax(0, 1fr);
+  gap: 1rem clamp(1.4rem, 5vw, 4rem);
+  align-items: start;
+}
+.layout { padding-block: clamp(1.6rem, 4vw, 3.25rem) clamp(2.5rem, 7vw, 6rem); }
+
+.contents { position: sticky; top: 1.25rem; align-self: start; }
+.contents p { margin: 0 0 .48rem; color: var(--muted); font-size: .86rem; font-weight: 650; }
+.contents ul { margin: 0; padding: 0; border-left: 1px solid var(--rule); list-style: none; }
+.contents a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: .4rem .65rem .4rem .95rem;
+  border-left: 2px solid transparent;
+  margin-left: -1px;
+  color: var(--muted);
+  font-size: .94rem;
+  line-height: 1.35;
+  text-decoration: none;
+}
+.contents a:hover, .contents a[aria-current] { background: var(--wash); color: var(--accent); }
+.contents a[aria-current] { border-color: var(--accent); font-weight: 650; }
+
+.article {
+  min-width: 0;
+  margin: 0;
+  font-size: 1.063rem;
+  line-height: 1.84;
+  overflow-wrap: anywhere;
+}
+.article h2 {
+  margin: clamp(2.7rem, 7vw, 5rem) 0 1.3rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  font: 700 clamp(1.8rem, 3.1vw, 2.5rem)/1.28 var(--title-font);
+  letter-spacing: -.02em;
+  scroll-margin-top: 1.3rem;
+}
+.article h2:first-child { margin-top: 0; padding-top: 0; border: 0; }
+.article h3 {
+  margin: 2rem 0 .5rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--rule-soft);
+  font: 680 clamp(1.3rem, 2.15vw, 1.67rem)/1.44 var(--text-font);
+  text-wrap: pretty;
+}
+.article h2 + h3 { margin-top: 0; padding-top: 0; border: 0; }
+.article h4 { margin: 1.25rem 0 .4rem; color: var(--accent); font-size: 1.06rem; }
+.article p { max-width: 46rem; margin: .65rem 0 1.05rem; }
+.article h3 + p:not(.entry-text) { color: var(--muted); font-size: .94rem; line-height: 1.7; }
+.article h3 + p > em:only-child { font-style: normal; }
+.article strong { color: var(--ink); }
+.article .entry-label { color: var(--accent); font-size: .95em; font-weight: 750; white-space: nowrap; }
+.article .reuse-note { padding: .68rem .95rem; border-left: 2px solid #759078; background: var(--wash); }
+.article li + li { margin-top: .52rem; }
+.article ul { padding-inline-start: 1.35rem; }
+.article blockquote {
+  max-width: 46rem;
+  margin: 1rem 0;
+  padding: .55rem .95rem;
+  border-left: 2px solid #759078;
+  color: var(--muted);
+}
+.article blockquote p { margin: .15rem 0; }
+code { padding: .08em .23em; background: var(--wash); color: var(--accent); font: .9em var(--mono-font); }
+
+.article details {
+  margin: .8rem 0 1.35rem;
+  border-block: 1px solid var(--rule);
+  background: var(--surface);
+}
+.article details[open] { padding: 0 .85rem .8rem; }
+.article summary {
+  min-height: 44px;
+  padding: .55rem .85rem;
+  color: var(--accent);
+  font-size: .94rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+.article summary:hover { background: var(--wash); }
+.article details[open] > summary { margin: 0 -.85rem .75rem; border-bottom: 1px solid var(--rule); }
+.article details > p:last-child { margin-bottom: 0; }
+#appendix-search { margin-block: .85rem .45rem; }
+#appendix-search label { font-size: .94rem; }
+#appendix-search input {
+  display: block;
+  width: min(100%, 22rem);
+  min-height: 44px;
+  margin-top: .18rem;
+  padding: .35rem .6rem;
+  border: 1px solid #7c8c78;
+  border-radius: .24rem;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+#appendix-status { margin: .2rem 0 0; color: var(--muted); font-size: .875rem; }
+
+.table-hint { display: none; }
+.table-scroll { max-width: 100%; margin: .8rem 0 1.3rem; overflow-x: auto; border: 1px solid var(--rule); }
+table { width: 100%; min-width: 33rem; border-collapse: collapse; font-size: .93rem; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.table-scroll.compact table { min-width: 19rem; }
+th, td { padding: .55rem .65rem; border-bottom: 1px solid var(--rule-soft); text-align: left; }
+th { background: var(--wash); color: var(--accent); font-weight: 700; }
+tbody tr:nth-child(even) { background: #f5f5ec; }
+tr:last-child td { border-bottom: none; }
+
+.figure-pair, .litmus-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .9rem; }
+.figure-pair { margin: 1rem 0 1.4rem; }
+.source-figure { min-width: 0; margin: 0; padding: .65rem; border: 1px solid var(--rule); background: var(--surface); }
+.source-figure > p, .source-figure figcaption p { margin: 0; }
+.source-figure figcaption { margin: .65rem .15rem .12rem; color: var(--muted); font-size: .9rem; line-height: 1.65; }
+.open-figure { display: block; background: white; }
+.open-figure:hover { outline: 1px solid var(--accent); }
+.source-figure img { display: block; width: 100%; height: auto; }
+.chart-figure { max-width: 41rem; margin: .9rem 0 1.35rem; }
+
+.litmus-figure { margin: 1.1rem 0 1.4rem; padding: .7rem .85rem; scroll-margin-top: 1rem; }
+.litmus-panel { min-width: 0; table-layout: fixed; }
+.litmus-panel caption { padding: .4rem .15rem; color: var(--ink); text-align: left; font-weight: 740; }
+.litmus-panel th, .litmus-panel td { padding: .48rem .58rem; }
+.litmus-panel th.arm { background: #e3edf4; color: #284b63; }
+.litmus-panel th.tso { background: #f3ead9; color: #5a4324; }
+.litmus-panel code { padding: 0; background: transparent; color: var(--ink); white-space: nowrap; }
+.litmus-outcome { background: var(--wash); }
+.litmus-figure figcaption { margin-top: .7rem; padding-top: .65rem; border-top: 1px solid var(--rule); }
+
+.footer .wrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .25rem 1.5rem;
+  padding-block: .8rem 1.55rem;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: .9rem;
+}
+.footer a { display: inline-flex; align-items: center; min-height: 44px; }
+
+.archive main { padding-bottom: clamp(3rem, 8vw, 6rem); }
+.archive-heading { padding-block: clamp(2.4rem, 7.6vw, 6.6rem) clamp(1.9rem, 5.5vw, 4.75rem); }
+.archive-heading p { margin: .85rem 0 0; color: var(--muted); }
+.archive main > section { padding-block: clamp(1.6rem, 4vw, 3rem); border-top: 1px solid var(--rule); }
+.archive h2 { margin: 0; font: 700 1.45rem/1.4 var(--title-font); }
+.archive h3 { color: var(--muted); margin: 1.15rem 0 .2rem; font-size: 1rem; }
+.archive h3:first-child { margin-top: 0; }
+.archive .edition { margin: 0; font: 700 clamp(1.35rem, 3vw, 2.1rem)/1.35 var(--title-font); }
+.archive time { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.archive .edition time { color: inherit; }
+.archive .summary { max-width: 40rem; color: var(--muted); margin: .72rem 0 0; }
+.archive .read {
+  display: inline-flex;
+  align-items: center;
+  gap: .6em;
+  min-height: 44px;
+  margin-top: .95rem;
+  padding: .45rem .88rem;
+  border-radius: .24rem;
+  background: var(--accent);
+  color: white;
+  font-weight: 650;
+  text-decoration: none;
+}
+.archive .read:hover { background: #244431; }
+.archive .read:active { background: #1d3527; }
+.archive .issue-list { margin: 0; padding: 0; list-style: none; }
+.archive .issue-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .15rem 1rem;
+  min-height: 44px;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.archive .issue-list a { display: inline-flex; align-items: center; min-height: 44px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-enter] { animation: appear 420ms ease-out both; }
+  .contents a, .archive .read { transition: background-color 150ms ease, color 150ms ease; }
+  @keyframes appear {
+    from { opacity: .76; transform: translateY(5px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+@media (max-width: 51rem) {
+  .layout { display: block; }
+  .contents { position: static; margin-bottom: 1.65rem; padding-bottom: .7rem; border-bottom: 1px solid var(--rule); }
+  .contents ul { display: flex; flex-wrap: wrap; gap: 0 .32rem; border-left: 0; }
+  .contents a { margin-left: 0; padding-inline: .5rem; }
+}
+
+@media (max-width: 42rem) {
+  .issue-heading { grid-template-columns: 1fr; gap: 1.15rem; }
+  .issue-heading h1, .archive-heading h1 { font-size: clamp(2.2rem, 8.7vw, 3.55rem); }
+  .issue-meta { padding-top: .66rem; border-color: var(--rule); }
+  .issue-label { margin-bottom: .2rem; }
+  .article { font-size: 1rem; line-height: 1.8; }
+  .contents ul { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .contents a { font-size: .84rem; }
+  .figure-pair, .litmus-pair { grid-template-columns: minmax(0, 1fr); }
+  .table-hint:not(.compact) { display: block; margin: .65rem 0 .2rem; color: var(--muted); font-size: .84rem; }
+  .table-scroll { margin-top: .2rem; }
+  .archive main > section { grid-template-columns: 1fr; gap: .65rem; }
+}
+
+@media (max-width: 23rem) {
+  .wordmark { font-size: 1rem; }
+  .contents ul { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .table-hint.compact { display: block; margin: .65rem 0 .2rem; color: var(--muted); font-size: .84rem; }
+  .litmus-figure { padding-inline: .52rem; }
+  .litmus-panel th, .litmus-panel td { padding-inline: .4rem; }
+}
+
+@media print {
+  :root { --paper: white; --ink: black; --muted: #333; }
+  .skip, .masthead, .contents, .footer, #appendix-search, .table-hint { display: none; }
+  .wrap { width: 100%; }
+  .issue-heading, .layout { display: block; padding-block: .5rem 1rem; }
+  .issue-heading h1 span { display: inline; }
+  .issue-meta { margin-top: .6rem; }
+  h2, h3, caption, summary { break-after: avoid; }
+  figure, tr { break-inside: avoid; }
+  .table-scroll { overflow: visible; }
+  table, .table-scroll.compact table { min-width: 0; }
+}
+
+  
+.article pre { max-width:100%; overflow-x:auto; padding:.9rem; background:var(--wash); line-height:1.6; font-size:.85rem; }
+.article pre code { padding:0; background:transparent; }
+@media (max-width:480px) { .table-scroll { margin-inline:0; } }
+</style>
+<meta name="vector-weekly-date" content="2026-11-22">
+<meta name="vector-weekly-issue" content="002">
+<meta name="vector-weekly-summary" content="稀疏阵列供数、页表缓存压缩、异常重启与跨页存储保护，以及 AI 设计的时序验证。">
+</head>
+<body>
+  <a class="skip" href="#article">跳至正文</a>
+  <header>
+    <div class="wrap masthead">
+      <a class="wordmark" href="/">羟基太白</a>
+      <nav aria-label="站点导航"><a href="/weekly/">往期周刊 <span aria-hidden="true">↗</span></a></nav>
+    </div>
+    <div class="wrap issue-heading" data-enter>
+      <h1><span>处理器架构与</span><span>矢量设计周刊</span></h1>
+      <div class="issue-meta">
+        <p class="issue-label">第 002 期 · 2026 年 11 月 22 日</p>
+        <div class="window"><p>覆盖窗口 · 北京时间（Asia/Shanghai）</p><p class="coverage"><time datetime="2026-11-15T14:00:00+08:00">2026-11-15 14:00</time><br>至 <time datetime="2026-11-22T14:00:00+08:00">2026-11-22 14:00</time></p><p>含起点，不含终点</p></div>
+      </div>
+    </div>
+  </header>
+  <main class="wrap layout">
+    <nav class="contents" aria-label="本期目录">
+      <p>本期目录</p>
+      <ul><li><a href="#vector">矢量与矩阵</a></li><li><a href="#general">通用处理器架构</a></li><li><a href="#oss">开源项目与规范</a></li><li><a href="#patents">专利</a></li><li><a href="#ai">AI 工程实践</a></li><li><a href="#appendix">线索附录</a></li><li><a href="#vendors">厂商公开动态</a></li></ul>
+    </nav>
+    <article class="article" id="article" tabindex="-1">
+      <h2 id="vector">矢量与矩阵</h2>
+<h3 id="entry-01">MaskPE：装权重时恢复位置，执行时复用掩码关掉无效乘积</h3>
+<p><em>MaskPE: One Mask, Two Roles: Weight Placement and MAC Gating in Systolic Arrays</em></p>
+<p>论文预印本，arXiv:2611.26432v1，2026-11-19 17:08 UTC（北京时间 11 月 20 日 01:08）提交。Shu-Lin Shih、Chandra Sekhar Mummidi、Aamir Gujral Elhaissouni、Sandip Kundu，均署名美国马萨诸塞大学阿默斯特分校。未找到独立的公开代码入口。<a href="https://arxiv.org/abs/2611.26432v1">版本记录</a> · <a href="https://arxiv.org/html/2611.26432v1">公开全文</a></p>
+<p><strong class="entry-label">问题。</strong> 权重驻留的脉动阵列中，压缩 <code>[5,0,3,0]</code> 得到 <code>[5,3]</code> 后，不能直接把两个非零值塞给相邻 PE：这样会把 <code>5a₀+3a₂</code> 算成 <code>5a₀+3a₁</code>。非结构化剪枝省了存储，却仍要把权重放回原坐标，并让零权重位置继续转发激活和部分和。</p>
+<p><strong class="entry-label">方法。</strong> MaskPE 把不规则性留在每个 tile 的预装阶段。banked 存储中的非零值流配合位置 bitmap，经每列 streaming decoder 还原为固定长度的 <code>(weight,sel)</code> 流；每个 PE 保存自己的驻留权重和 <code>sel</code>。执行阶段，<code>valid_in &amp;&amp; sel</code> 决定乘积寄存器的时钟使能。关时钟后寄存器可能保留上个 tile 的旧乘积，因此还要在送往 INT32 累加器前用 <code>sel</code> 把乘积屏蔽为零。激活转发继续运行，部分和寄存器按延迟后的有效位更新。<a href="https://arxiv.org/html/2611.26432v1#S4">位置恢复与 PE 数据通路</a></p>
+<p>下面是本刊按公开机制整理的最小例子，依次看“是否消费值”和“是否更新乘积”；这是说明表，并非作者测量图。</p>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="可横向滚动的表格 1" class="table-scroll" role="region" tabindex="0"><table style="min-width:42rem">
+<thead>
+<tr>
+<th scope="col">原位置</th>
+<th scope="col" style="white-space:nowrap">bitmap</th>
+<th scope="col">从压缩值流消费</th>
+<th scope="col">预装进 PE</th>
+<th scope="col">有效激活到来时</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td style="text-align: right;">1</td>
+<td>5</td>
+<td>weight=5，sel=1</td>
+<td>更新乘积并累加</td>
+</tr>
+<tr>
+<td>1</td>
+<td style="text-align: right;">0</td>
+<td>不消费</td>
+<td>weight=0，sel=0</td>
+<td>停乘积寄存器；屏蔽旧乘积；照常转发</td>
+</tr>
+<tr>
+<td>2</td>
+<td style="text-align: right;">1</td>
+<td>3</td>
+<td>weight=3，sel=1</td>
+<td>更新乘积并累加</td>
+</tr>
+<tr>
+<td>3</td>
+<td style="text-align: right;">0</td>
+<td>不消费</td>
+<td>weight=0，sel=0</td>
+<td>停乘积寄存器；屏蔽旧乘积；照常转发</td>
+</tr>
+</tbody>
+</table></div>
+<p>实际 32 行 decoder 按 bottom-first 次序预装。下一 tile 的 bank 请求、每列缓冲与位置计算和当前 tile 计算重叠。作者的 decoder 在应消费非零值却无值可用时报告 underflow，并不会停住固定预装时序；“按时供到”因此是正确性条件，不能只看平均带宽。<a href="https://arxiv.org/html/2611.26432v1#S4.SS2">decoder 细节</a></p>
+<p><strong class="entry-label">效果与边界。</strong> 作者实现 32×32 INT8 乘法、INT32 累加阵列，比较相同精度、尺寸和执行时序的 dense WS。Llama 3.2 1B 第 8 层七种 projection 经 Wanda 做 50% 非结构化剪枝；每种 projection 的能耗只抽样三个输出 tile。在 Nangate45、Yosys/ABC、OpenROAD 和 OpenSTA 的 RTL/布局后时钟树分析中，逻辑加模型权重内存能耗低 <strong>12.5%–14.4%</strong>，不包含两方案共用的激活与累加存储器，权重 SRAM 能耗由访问记录和 Accelergy 系数估算，属于混合估计而非芯片实测。512 个 tile 的位置流和 32,768 个输出均与 dense reference 一致，稳态 tile 间隔不变。在 tile 粒度外部供数模型下，带宽受限时最高 <strong>1.53×</strong>；供数充足后两者受相同阵列时序限制，收益回到 <strong>1×</strong>。该模型不包含逐事务 DRAM 与逐拍背压。<a href="https://arxiv.org/html/2611.26432v1#S5">实验方法及结果</a></p>
+<p><strong class="entry-label">可借鉴。</strong> 为“非零 tile→全零 tile→非零 tile”的连续序列做定向回归：给乘积寄存器预先留下非零值，检查零 tile 期间部分和仍按期转发且没有旧值污染；再构造非零值集中在同一 bank、接近预装 deadline 的列，检查 underflow。性能上固定阵列和 batch，扫权重字节/周期，分别统计预装等待与阵列忙拍，才能区分“少搬数据”与“少做算术”的收益。本条没有独立复现作者结果。</p>
+<h2 id="general">通用处理器架构</h2>
+<h3 id="entry-02">LeafPack：压缩共享缓存中的页表叶行，给应用数据留出容量</h3>
+<p><em>Compressing Page-Table Leaves in Shared Caches</em></p>
+<p>论文预印本，arXiv:2611.24992v1，2026-11-18 12:38 UTC（北京时间 20:38）提交。Samarth Narang 署名纽约大学与 NVIDIA；Aamer Jaleel 署名 NVIDIA；Brandon Reagen 署名纽约大学。arXiv 记录题名如上，全文内题名为 <em>Pack Light, Walk Fast: Compact Page-Table Residency in Shared Caches</em>；全文的会议/DOI 行含占位信息，本刊只按预印本报道，未核实正式录用。未找到作者独立代码入口。<a href="https://arxiv.org/abs/2611.24992v1">版本与原题</a> · <a href="https://arxiv.org/html/2611.24992v1">公开全文</a></p>
+<p><strong class="entry-label">问题。</strong> 4 KiB 页和 8 B PTE 下，一条 64 B 叶页表行覆盖 32 KiB 虚拟空间。页表遍历把这类行留在共享缓存，能少访问 DRAM，却会挤走同核运行或其他核的应用数据。单纯提高页表行保留优先级，可能让地址翻译更快、整体程序反而更慢。</p>
+<p><strong class="entry-label">方法。</strong> LeafPack 保留内存里的架构页表格式，让 walker 给请求标明“叶页表访问”，只改变共享缓存的驻留表示。同一行八个 PTE 的 PFN 连续且全部非 PFN 位一致时，用起始描述符恢复整行；否则走未压缩回退。Packed 格式分别保存各叶行起始描述符；Dense 格式跨行共享基准，用偏移描述起始 PFN。每条叶行仍有独立有效位和一致性状态，写入导致格式不再适配时必须展开或写回。<a href="https://arxiv.org/html/2611.24992v1#S3.SS1">压缩条件</a> · <a href="https://arxiv.org/html/2611.24992v1#S3.SS4">一致性处理</a></p>
+<p>下表按原文格式整理，比较满槽覆盖与命中恢复成本；未绘制或转载论文图像。</p>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="可横向滚动的表格 2" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th scope="col">叶行表示</th>
+<th scope="col" style="text-align: right;">一个逻辑槽覆盖</th>
+<th scope="col" style="text-align: right;">逻辑槽占用</th>
+<th scope="col" style="text-align: right;">额外命中解码</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Packed</td>
+<td style="text-align: right;">最多 8×64 B</td>
+<td style="text-align: right;">80 B（含槽 metadata）</td>
+<td style="text-align: right;">2 周期</td>
+</tr>
+<tr>
+<td>Dense</td>
+<td style="text-align: right;">最多 16×64 B</td>
+<td style="text-align: right;">80 B（含槽 metadata）</td>
+<td style="text-align: right;">3 周期</td>
+</tr>
+<tr>
+<td>不规则叶行</td>
+<td style="text-align: right;">保留原始 64 B 行</td>
+<td style="text-align: right;">按原文回退路径存放</td>
+<td style="text-align: right;">无法套用上述压缩比</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong class="entry-label">80 B 不是缓存全部开销。</strong> 四条 64 B payload way 配一条 metadata way，形成五路物理组；tag array 中另存区域标记和逐行有效位。组未装满时仍占五路，不能把空槽算成可供应用数据使用的空间。控制器用 set dueling 在压缩 5 路、压缩 15 路、未压缩 3 路上限间选择；空出的路可给应用数据，而非静态预留。<a href="https://arxiv.org/html/2611.24992v1#S3.SS2">组织与查找</a> · <a href="https://arxiv.org/html/2611.24992v1#S3.SS5">选择策略</a></p>
+<p><strong class="entry-label">效果与边界。</strong> 作者在 gem5 25.1、Arm 全系统、Linux 4.18、4 KiB 基页、4 GHz OoO 模型和 1–8 核混合负载上评估。small/server 两种核的 ROB 为 128/320 项，共享 16 路 L2，每核 0.5 MiB（单程序至少 1 MiB），基础命中 12 周期。九个翻译密集负载上，相对 <strong>SRRIP 普通缓存</strong>，harmonic speedup 的几何平均改善为 <strong>18.7%/17.7%</strong>；相对默认 random replacement 普通缓存为 <strong>28.7%/28.4%</strong>，不能混用基线。二十个冻结控制器后才评估的 held-out mixes 上，相对默认普通缓存为 <strong>21.4%/18.5%</strong>。这些是作者仿真，不是服务器实机结果；2/3 周期解码也计入模型。大页覆盖充分、PFN 碎片化或压缩组利用率低时收益会缩小；碎片化 XSBench 暴露过候选策略和 miss 归属偏置，作者将后续修正单列消融，未替换原 held-out 控制器。<a href="https://arxiv.org/html/2611.24992v1#S4">平台和指标定义</a> · <a href="https://arxiv.org/html/2611.24992v1#S5.SS6">敏感性与局限</a></p>
+<p><strong class="entry-label">可借鉴。</strong> 对缓存中压缩 metadata 的方案，先把 tag、组内空洞、解码周期和回收写回全部计入，再看容量收益。建议固定 TLB 与 L2 容量，同时扫物理页连续性和数据敏感 co-runner：记录 leaf misses、数据 MPKI、压缩组占用和每核 slowdown。定向测试只改一个 PTE 的权限或 PFN，检查同行重构与同槽其他行失效范围；策略翻转时还应覆盖 outstanding miss 与组回收交错。本刊未运行该模型。</p>
+<h2 id="oss">开源项目与规范</h2>
+<h3 id="entry-03">LLVM：向量 gather 的目的寄存器分开以后，异常重启才保得住索引</h3>
+<p>来源类型：开源编译器补丁。LLVM 项目；Craig Topper。PR #224739 于 <strong>2026-11-20 06:40:09 UTC（北京时间 14:40:09）</strong>合入主干，固定提交 <code>a464c446768291a143deb9b3ee7877f159cb4700</code>。这是主干实现，不能据此声称某个已发布 LLVM 版本已包含修复。<a href="https://github.com/llvm/llvm-project/commit/a464c446768291a143deb9b3ee7877f159cb4700">提交与完整差分</a> · <a href="https://github.com/llvm/llvm-project/pull/224739">PR 说明</a></p>
+<p><strong class="entry-label">问题</strong>　一次 <code>vluxei32.v</code> 从向量寄存器取索引，再将各地址的数据写回目的向量。补丁说明：部分 SiFive 核在非零元素触发异常时，可能先改写目的寄存器中该元素以及后续活动元素。如果目的与索引寄存器重叠，这些写入就可能破坏尚待使用的索引。处理程序修好页映射后，即使从记录的 <code>vstart</code> 继续执行，后面的地址也已失真。关键不是异常前写了多少结果，而是重启需要的输入是否仍在。</p>
+<p><strong class="entry-label">方法</strong>　Clang 增加 <code>-mfix-sifive-mal-9174</code> 和别名 <code>-mfix-sifive-mal-9191</code>，各有对应 <code>-mno-fix-…</code> 关闭选项；<code>sifive-p870-d</code> CPU 模型默认启用。后端在选择指令后，将有序 <code>vloxei*.v</code> 和无序 <code>vluxei*.v</code> 的目的操作数标为 early-clobber，告诉寄存器分配器该定义可能在源使用完之前发生，因而不能让目的组覆盖索引源。它改变的是编译器的架构寄存器分配约束，不等于给硬件增加 VRF 端口或重命名资源。<a href="https://github.com/llvm/llvm-project/blob/a464c446768291a143deb9b3ee7877f159cb4700/clang/include/clang/Options/Options.td#L5973">开关与别名</a> · <a href="https://github.com/llvm/llvm-project/blob/a464c446768291a143deb9b3ee7877f159cb4700/llvm/lib/Target/RISCV/RISCVISelLowering.cpp#L28883">后端约束</a> · <a href="https://github.com/llvm/llvm-project/blob/a464c446768291a143deb9b3ee7877f159cb4700/llvm/lib/Target/RISCV/RISCVProcessors.td#L618">P870-D 默认配置</a></p>
+<p><strong class="entry-label">效果</strong>　新增的 RV32/RV64 代码生成回归给出一个直接可见的代价。在其 e8、mf8、32 位索引的返回值例子中，不启用规避时生成 <code>vluxei32.v v8, (a0), v8</code>；启用后生成 <code>vluxei32.v v9, (a0), v8</code>，再用 <code>vmv1r.v v8, v9</code> 将结果放回 ABI 要求的位置。有序加载也有对应对照。这个例子多出一条整寄存器复制，并占用不同的目的寄存器，不能把这个静态指令差直接换算成通用性能下降。回归检查的是汇编输出与机器指令约束，并未在实际故障芯片上运行异常重启测试；本刊也未独立复现该勘误。<a href="https://github.com/llvm/llvm-project/blob/a464c446768291a143deb9b3ee7877f159cb4700/llvm/test/CodeGen/RISCV/rvv/vluxei-vloxei-overlap.ll#L2-L24">代码生成回归</a></p>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="可横向滚动的表格 3" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th scope="col">此回归中的配置</th>
+<th scope="col">gather 指令</th>
+<th scope="col">随后的数据移动</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>不启用规避</td>
+<td><code>vluxei32.v v8, (a0), v8</code></td>
+<td>无</td>
+</tr>
+<tr>
+<td>启用规避</td>
+<td><code>vluxei32.v v9, (a0), v8</code></td>
+<td><code>vmv1r.v v8, v9</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>表按上述公开测试重排，展示的是特定函数的生成代码，不是作者实测周期。</p>
+<p><strong class="entry-label">可借鉴</strong>　做向量 RTL 回归时，为合法的源／目的重叠编码专门加入中途 page fault：固定 SEW、索引 EEW、LMUL、VL 和掩码，在第 k 个活动元素（k&gt;0）放置无映射地址；记录异常前索引、<code>vstart</code> 和目的值，补页后继续，最终与无异常参考逐元素比较。扫描有序／无序 gather、不同 k 及尾部／掩码策略。预期是完成重启后得到同一结果，且未完成元素仍能获得原始索引。这是本刊建议的回归，并非补丁中已有的硬件实测。编译器规避能降低触发机会，RTL 验证仍需检查 ISA 允许的重叠情形。</p>
+<details class="article-detail">
+<summary>默认值、边界与复核入口</summary>
+<ul>
+<li>开关的 9191 名称在 Clang 中是 9174 的别名；后端只增加一个 <code>fix-sifive-mal-9174</code> 特性。</li>
+<li>此补丁列出 <code>VLUXEI8/16/32/64</code> 与 <code>VLOXEI8/16/32/64</code>，不要据此扩大为所有向量访存指令。</li>
+<li>官方提交只说部分 SiFive 核，并明确 P870-D 默认启用；本刊未取得完整受影响芯片／步进清单。</li>
+<li><a href="https://github.com/llvm/llvm-project/blob/a464c446768291a143deb9b3ee7877f159cb4700/clang/test/Driver/riscv-features.c#L51">驱动测试</a>核对四种开关到 target feature 的转换；上表回归核对 RV32、RV64 以及 P870-D 默认行为。</li>
+<li>提交附有 <code>Assisted-by: Claude</code>，只证明作者这样署名，未公开足够过程来判断 AI 做了哪部分设计与验证。</li>
+</ul>
+</details>
+<h3 id="entry-04">香山：跨页 store 的保护状态，必须跟到真正出队</h3>
+<p>来源类型：开源 RTL 修复。OpenXiangShan；提交作者 lwd。PR #6822 于 <strong>2026-11-16 02:51:45 UTC（北京时间 10:51:45）</strong>合入主干，提交 <code>4f6da52143b64b7a5a5419d309c79c4bf5e3794e</code>；PR 初建于 11 月 2 日，本期依据合入时间收录。<a href="https://github.com/OpenXiangShan/XiangShan/pull/6822">PR</a> · <a href="https://github.com/OpenXiangShan/XiangShan/commit/4f6da52143b64b7a5a5419d309c79c4bf5e3794e">固定提交</a></p>
+<p><strong class="entry-label">问题</strong>　较老的 store 横跨两个页，第二页相关状态保存在 UnalignQueue。它向 Sbuffer 前进的过程中，会先经过中间的 EnterSbufferQueue。若刚把数据交给中间队列就撤掉第二页的 forwarding guard，较年轻 load 可能撞上一个交接空窗：UnalignQueue 已释放保护，最终 Sbuffer 又尚未覆盖这些跨页字节。PR 明确把这个空窗作为修复对象。</p>
+<p><strong class="entry-label">方法</strong>　修改只有一处握手条件，但它重新定义了资源的生命周期。原实现用读数据侧指针 <code>headrdataPtr</code> 与中间队列入口的 <code>writeSbufferWire.head.fire</code> 判断释放；新实现要求 <code>headDeqPtr</code> 与 UnalignQueue 的 <code>sqIdx</code> 相等，并且 <code>io.sqDeqCnt.orR</code> 为真，等对应 store 真正离开 SQ 才消费该记录。该版本周围源码还说明：只有 EnterSbufferQueue 到最终 Sbuffer 的请求实际握手后才产生 SQ 出队额度；跨 16 B 的拆分 store 要等尾片被接受才形成完整 store 的额度。<a href="https://github.com/OpenXiangShan/XiangShan/blob/4f6da52143b64b7a5a5419d309c79c4bf5e3794e/src/main/scala/xiangshan/mem/lsqueue/NewStoreQueue.scala#L1318">握手修改</a> · <a href="https://github.com/OpenXiangShan/XiangShan/blob/4f6da52143b64b7a5a5419d309c79c4bf5e3794e/src/main/scala/xiangshan/mem/lsqueue/NewStoreQueue.scala#L1321">出队额度注释与实现</a></p>
+<p>下面按补丁重排状态交接；看「中间队列已接收、SQ 尚未出队」一行，两种释放点在这里分开。这是本刊解释表，不是时序仿真波形。</p>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="可横向滚动的表格 4" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th scope="col">事件</th>
+<th scope="col">旧释放点</th>
+<th scope="col">新释放点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>匹配的 store 交给中间队列</td>
+<td>可以释放 UnalignQueue 记录</td>
+<td>保留记录</td>
+</tr>
+<tr>
+<td>中间队列等待最终 Sbuffer</td>
+<td>第二页可能出现保护空窗</td>
+<td>第二页保护仍保留</td>
+</tr>
+<tr>
+<td>匹配 store 满足 SQ 实际出队条件</td>
+<td>已提前释放</td>
+<td>此时才释放</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong class="entry-label">效果</strong>　能从差分确认的是第二页保护的保持时间延长到了匹配 store 的 SQ 出队事件。此提交仅改一个 Scala 文件，没有附加专门回归文件，也没有公开本条修复的吞吐、面积或时序数据。本刊进行了源码与 PR 对照，未运行 Chisel 生成、RTL 仿真或综合，因而不能写成「硬件回归已通过」。</p>
+<p><strong class="entry-label">可借鉴</strong>　搭建一个跨页 store 后紧跟同地址范围 load 的定向测试，主动对最终 Sbuffer 施加背压，同时让中间队列仍可接收。逐拍观察 store 的 <code>sqIdx</code>、实际出队、第二页保护以及年轻 load 的处理。预期是保护一直持续到匹配的 store 真正出队，load 不得在交接期间读到旧的第二页字节。再覆盖跨 16 B 的两片完成、两页映射和物理地址不同、重定向、MMIO／非缓存请求插入等边界。不要只断言某个 <code>ready</code> 延迟几拍：应核对保护覆盖和 load 最终数据，因为背压会改变实际等待长度。</p>
+<h3 id="entry-05">QEMU：Zalasr release store 后补一道屏障，堵上 RCsc 的 store→load 缺口</h3>
+<p>来源类型：开源模拟器修复。QEMU；LIU Zhiwei 与共同作者 TANG TianCheng。提交作者时间为 2026-08-21，<strong>进入当前主干的 committer 时间为 2026-11-17 10:31:31 UTC（北京时间 18:31:31）</strong>，据此纳入窗口。固定提交 <code>1f19e0dea11b1f20bd20d3293963859aa414dc2e</code>。<a href="https://github.com/qemu/qemu/commit/1f19e0dea11b1f20bd20d3293963859aa414dc2e">提交与作者说明</a></p>
+<p><strong class="entry-label">问题</strong>　Zalasr 的 load-acquire 和 store-release 带 RCsc 标注。考虑初始 X=Y=0 的两 hart Store Buffering 测试：hart 0 先 <code>sw.rl X=1</code> 再 <code>lw.aq r1=Y</code>；hart 1 先 <code>sw.rl Y=1</code> 再 <code>lw.aq r2=X</code>。RVWMO 的 preserved program order 第 7 条要求同一 hart 的两个 RCsc 内存操作保持顺序，因此两边都读到 0 的结果不允许出现。原 QEMU 翻译只在 release store <strong>之前</strong>加屏障，约束更早操作到 store，却没有约束这次 store 到其后的 acquire load。<a href="https://github.com/riscv/riscv-isa-manual/blob/3142f66fd71c7ea0326b3687072318aedab587f8/src/unpriv/zalasr.adoc#L123">RCsc 标注</a> · <a href="https://github.com/riscv/riscv-isa-manual/blob/3142f66fd71c7ea0326b3687072318aedab587f8/src/unpriv/rvwmo.adoc#L278">RVWMO 同步规则</a></p>
+<div aria-label="可横向滚动的表格 5" class="table-scroll compact" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th scope="col">hart 0</th>
+<th scope="col">hart 1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sw.rl X = 1</code></td>
+<td><code>sw.rl Y = 1</code></td>
+</tr>
+<tr>
+<td><code>lw.aq r1 = Y</code></td>
+<td><code>lw.aq r2 = X</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>此为按提交说明写出的 litmus 伪汇编，地址形成、同步启动和轮间复位从略；禁止终态是 <code>r1=r2=0</code>。</p>
+<p><strong class="entry-label">方法</strong>　在 <code>gen_store_release()</code> 的 <code>tcg_gen_qemu_st_tl()</code> 之后增加 <code>tcg_gen_mb(TCG_MO_ALL | TCG_BAR_SC)</code>。提交说明解释，在 x86 后端，包含 store→load 的全屏障会生成带 lock 前缀的序列以排空 store buffer；AArch64 后端生成 <code>dmb ish</code>。这并非因为 x86 TSO 已经足够：TSO 恰好仍允许这里需要阻止的 store→load 重排。acquire load 后已有屏障，本次不修改加载端。<a href="https://github.com/qemu/qemu/blob/1f19e0dea11b1f20bd20d3293963859aa414dc2e/target/riscv/tcg/insn_trans/trans_rvzalasr.c.inc#L86-L96">翻译代码</a></p>
+<p><strong class="entry-label">效果</strong>　作者在提交说明中报告：一个 4 vCPU guest 的裸机 SB 测试在旧实现中，100,000 次里出现 89,881 次禁止的 [0,0]。这是作者提供的故障复现数字；说明未给出完整主机 CPU、QEMU 运行命令和所有测试条件，不能把这个频率当作可跨平台比较的概率。本次差分没有新增 litmus 测试文件，本刊未运行前后版本，修复后的零失败次数也未独立核验。代码能确认翻译器新增了 store 后的全屏障；它比仅约束后续 RCsc 操作更强，也会约束后续非 RCsc 操作，存在待测的模拟性能代价。</p>
+<p><strong class="entry-label">可借鉴</strong>　验证内存模型时，将「程序顺序中的前驱→release store」与「release store→后继 RCsc 操作」分开列入回归；只测消息传递的 release/acquire 常见路径容易漏掉后者。在相同 MTTCG、guest hart 数、主机架构和同步启动方式下，对照此提交的前后版本运行 SB，要求禁止终态不出现，并保留完整迭代数和环境。再分别加入非 RCsc 后继，量化全屏障保守实现带来的运行时间变化。模拟器顺序更强可能掩盖 RTL 的排序错误，因此 QEMU 通过不能替代基于 ISA 模型的允许结果集合检查。</p>
+<h2 id="patents">专利</h2>
+<h3 id="entry-06">Groq 的流式寄存器文件：把同拍冲突检查提前到编译期</h3>
+<p>专利申请公开 · Groq, Inc. · <strong>US20260368089A1，Processor Architecture</strong>。2026-11-19 公开，申请日 2026-07-27，最早主张的临时申请优先权为 2017-09-15。它是延续申请，本期新增是这份申请公开，并不表示流式架构本周才出现。A1 为申请公开文本；本刊未核定其后续授权或审查状态。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260368089#page=1">USPTO 原件及首页</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260368089#page=19">延续与优先权链，第1页</a></p>
+<p><strong class="entry-label">问题。</strong> 当多个存储 slice 要把操作数送往向量／矩阵执行 slice 时，增加一条数据通路还不够：两个生产者如果同拍更新同一个流式寄存器，硬件仍需仲裁或报错。这个方案让编译器把每次读写的时间与目的位置一起安排。</p>
+<p><strong class="entry-label">方法。</strong> 独立权利要求13描述四步：取得程序，生成面向存储单元与执行单元的指令流，将操作数分配给流式寄存器文件（SRF），再在指令流中指定执行时间和 SRF 访问，使执行单元间不发生同时访问冲突。直接回引13的从属项14进一步要求编译器维护逐拍硬件状态模型。独立项1则把硬件部件连起来：存储功能组、执行功能组、两者之间传输操作数与结果的 SRF，以及指定寄存器访问的编译器。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260368089#page=28">权利要求1、13、14，原件第10—11页</a></p>
+<p>下面按独立项13重排信息流；这是本刊解释，不是产品实测时序。</p>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="可横向滚动的表格 6" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th scope="col">阶段</th>
+<th scope="col">谁保存或决定状态</th>
+<th scope="col">输出与约束</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>分配</td>
+<td>编译器保存操作数到 stream/lane 的映射</td>
+<td>每个操作数有确定的 SRF 位置</td>
+</tr>
+<tr>
+<td>排程</td>
+<td>编译器的逐拍模型记录已占用资源</td>
+<td>两个生产者不能在同拍争同一更新位置</td>
+</tr>
+<tr>
+<td>运行</td>
+<td>存储与执行 slice 按各自指令流动作</td>
+<td>指令与数据按约定相对时刻相遇</td>
+</tr>
+<tr>
+<td>完成</td>
+<td>执行结果经输出流返回存储侧</td>
+<td>消费者必须对应到结果实际出现的拍</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong class="entry-label">具体实现边界。</strong> 说明书[0054]—[0059]将 SRF 作为编译器可见的状态，按 stream 标号和 lane 组织；若基本数据宽度为 INT8，一个 FP16 操作数可占两条 stream，INT32 可占四条。这里的逻辑 stream 数量不等于集中式 VRF 的物理读写端口数。[0051]另举存储 SRAM 的约束：同时一读一写需要落到不同 bank。因而验证“SRF 位置不冲突”后，还要单独检查存储 bank 的逐拍占用。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260368089#page=22">说明书第4—5页</a></p>
+<p><strong class="entry-label">效果与代价。</strong> 公开文本支持的是硬件与编译器之间的功能契约，未给出可据此比较的面积、频率或端到端加速比。把仲裁前移后，排程正确性依赖硬件时延模型：改变跨 slice 管线级数、插入重定时寄存器或修改数据类型分组，都应重新核对生产与消费拍。这里的代价是本刊从契约推导的验证要求，未做硅上或RTL性能复现。</p>
+<p><strong class="entry-label">可借鉴。</strong> 为自己的流式向量原型生成一张 <code>(cycle, stream, lane, producer, consumer)</code> 占用表，先用两个生产者故意写同一个位置做反例；预期编译检查拒绝，而不是运行时偶然覆盖。再固定操作序列，分别将一个跨 slice 路径延迟加1拍、把 INT8 换为 FP16；预期前者触发消费拍不匹配，后者同时占用成对 stream 并检查对齐。最后另列 <code>(cycle, SRAM bank, read/write)</code> 表，避免把不同层级的无冲突条件混在一起。这是建议回归，未报告本期执行结果。</p>
+<details class="article-detail">
+<summary>从属项如何回引，以及错误状态保存在哪里</summary>
+<p>权利要求2直接回引1，限定二维的 stream 标号与 lane；权利要求5直接回引1，限定寄存器分组形成更大操作数。关于错误信息，权利要求10直接回引1，11和12分别回引10：备用位保存错误类型／syndrome，一组寄存器存错误类型，另一组存辅助信息。说明书[0126]—[0132]举出 gather越界、scatter越界与bank冲突，允许同时置多个错误标志，但辅助信息按 gather、scatter、bank冲突的优先顺序捕获。不能把这几个从属项自动拼成独立项13必有的全部机制。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260368089#page=29">权利要求第11页</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260368089#page=28">说明书第10页</a></p>
+</details>
+<h2 id="ai">AI 工程实践</h2>
+<h3 id="entry-07">AI 辅助办公：把三行周会记录变成保留冲突的任务表</h3>
+<p>官方产品公告与本刊自构造样例。Google Workspace 于 2026-11-16 公告 Apps Script 编辑器中的 Gemini 正式提供；分批开放从 11 月 12 日开始，不等于所有账户在公告当天可见。它能生成脚本、逐块显示修改，并依据执行日志提出修复。<a href="https://workspaceupdates.googleblog.com/2026/11/customize-and-extend-workspace-with-apps-script.html">原始公告</a> · <a href="https://developers.google.com/apps-script/guides/gemini">开发者使用说明</a></p>
+<p><strong class="entry-label">问题。</strong> 两份会议记录给同一任务写了不同负责人和截止日。让 AI 直接“整理成最终待办”，很容易把冲突抹成一个看似确定的结论。本例要求先形成可回查的冲突清单，再由主持人定夺。</p>
+<p><strong class="entry-label">输入与 AI 操作。</strong> 以下三行均为本刊虚构的公开样例，不来自任何实际会议。把它们与提示词一起交给模型，要求生成一个纯 JavaScript 分组函数；只按相同 ID 合并，保留所有不同值和来源，不靠文本相似度猜测两个 ID 是同一任务。</p>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="可横向滚动的表格 7" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th scope="col">ID</th>
+<th scope="col">负责人</th>
+<th scope="col">截止日期</th>
+<th scope="col">来源位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REQ-01</td>
+<td>架构</td>
+<td>2026-11-23</td>
+<td>公开样例A#12</td>
+</tr>
+<tr>
+<td>REQ-01</td>
+<td>RTL</td>
+<td>2026-11-24</td>
+<td>公开样例B#7</td>
+</tr>
+<tr>
+<td>REQ-02</td>
+<td>验证</td>
+<td>2026-11-25</td>
+<td>公开样例A#13</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>生成 buildLedger(rows)。每项输出 id、owners、dates、sources、conflicts。相同 ID 的不同负责人或日期都保留，并标出冲突；重复来源去重；缺 ID 或出处时抛错。只处理传入数组，不访问服务、不创建触发器。先给出样例的精确预期值，再给实现和断言。</p>
+</blockquote>
+<p><strong class="entry-label">产物与本期核验。</strong> 本刊在 macOS、Node.js v24.22.3 下执行自构造实现：REQ-01 输出两名负责人、两个日期、两处来源及 <code>owner</code>、<code>due</code> 两项冲突；REQ-02 无冲突。精确冲突、无冲突、重复输入不改变输出、缺出处拒绝处理这四项断言通过。这只验证纯函数与三行 fixture，<strong>没有在 Gemini 或 Google Workspace 服务中实测</strong>，也不证明模型能正确抽取任意会议文本。</p>
+<p><strong class="entry-label">可借鉴。</strong> 可复用产物是函数、fixture 和“待定”任务表。人工逐条核对原句、ID、时区和同名人，解决冲突后再形成正式待办。迁入 Sheets 时让脚本先写一张新表，检查分组前后的行数、任务数和来源数；生成脚本的能力与抽取质量、服务执行结果应分开验收。</p>
+<details class="article-detail">
+<summary>纯函数的最小实现</summary>
+<pre><code class="language-javascript">function buildLedger(rows) {
+  const groups = new Map();
+  for (const r of rows) {
+    if (!r.id || !r.source) throw Error('missing provenance or ID');
+    const g = groups.get(r.id) || {
+      id: r.id, owners: new Set(), dates: new Set(), sources: new Set()
+    };
+    g.owners.add(r.owner); g.dates.add(r.due); g.sources.add(r.source);
+    groups.set(r.id, g);
+  }
+  return [...groups.values()].map(g =&gt; ({
+    id: g.id, owners: [...g.owners], dates: [...g.dates],
+    sources: [...g.sources], conflicts: [
+      g.owners.size &gt; 1 ? 'owner' : '',
+      g.dates.size &gt; 1 ? 'due' : ''
+    ].filter(Boolean)
+  }));
+}
+</code></pre>
+<p>这是本刊样例代码；缺字段、日期有效性、大小写和人员别名仍需按真实表格另加规则。不要把本例的 ID 精确匹配当作通用实体消歧。</p>
+</details>
+<h3 id="entry-08">AI 辅助 RTL：优化之前先冻结逐拍契约</h3>
+<p>厂商公开工程案例与本刊迁移建议。OpenAI 于 2026-11-18 发布 <em>Advancing chip design with OpenAI models</em>，披露通过改写 SystemVerilog RTL、使用 Synopsys 工具检查行为与 PPA 的流程。<a href="https://openai.com/index/advancing-chip-design-with-our-models/">原始披露</a></p>
+<p><strong class="entry-label">问题。</strong> 优化器把一个两拍模块改成一拍，即使输出的算术值正确，也可能破坏调用者对握手、背压与 flush 的依赖。上述披露称一个乘法器在综合中面积约降 15%、延迟由两拍到一拍；这类结果需要同时说明功能边界和接口是否允许改拍。文中 AMD GPU IP 的“最高 14% PPA 改善”未公开分项、具体模块和完整基线，不能理解为整颗 GPU 的应用性能提高 14%。</p>
+<p><strong class="entry-label">输入与 AI 操作。</strong> 本刊构造一个同步单槽输出寄存器：<code>valid</code>、<code>payload</code> 为当前寄存器状态，<code>ready</code> 为下游输入；<code>flush</code> 在上升沿采样且优先级最高。令 AI 在改 RTL 前先输出下表，所有“下一拍”指该边沿更新后的状态。复位规则和上游接收条件另行固定，不由模型自由改写。</p>
+<div aria-label="可横向滚动的表格 8" class="table-scroll compact" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th scope="col">边沿前的条件</th>
+<th scope="col">该边沿更新后必须满足</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>flush=1</td>
+<td>valid=0；清除当前槽中的旧事务</td>
+</tr>
+<tr>
+<td>flush=0，valid=1，ready=0</td>
+<td>valid 保持1，payload 保持不变</td>
+</tr>
+<tr>
+<td>flush=0，valid=1，ready=1</td>
+<td>只消费一次；若允许同拍补充，按冻结的上游握手接收新事务</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong class="entry-label">产物与效果。</strong> 这张契约表、接口假设、候选 diff 和功能反例应与 PPA 报告一起交付。模型可以提出共享算术器、减少中间寄存器或调整流水线；每个候选先过功能与协议检查，再在相同约束和库下比较面积、关键路径与功耗。OpenAI 的数值为厂商披露，本刊未取得其 RTL、约束及完整测试制品；表中的单槽例子是待实施的回归方案，没有声称本期运行了形式工具。</p>
+<p><strong class="entry-label">可借鉴。</strong> 给模型的任务可以限定为：“先列所有状态转移和采样拍；保持背压时 payload；flush 优先于接收；列出同时 flush、ready、上游 valid 时的结果；接口语义冻结后一次只改一处。”人工复核 SVA 使用的是采样前还是更新后状态，确认 formal 假设没有排除背压与 flush 交错。若要承诺 flush 后系统内旧事务永不写回，还需把事务标记和下游在途状态纳入检查，单槽清 valid 并不足以证明这一点。</p>
+<h3 id="entry-09">AI 辅助处理器架构设计：用 IPC 和关键路径共同筛选 BOOM 改动</h3>
+<p><em>From Seed to BLOOM: Autonomously Growing a Better Out-of-Order Core</em></p>
+<p>论文预印本，arXiv:2611.26517v1，2026-11-19 17:59 UTC（北京时间 11 月 20 日 01:59）提交。Angela Cui、Ferran Hermida-Rivera、Jack Toubes（前三位共同贡献）、Jim Fang、Chengyi Lux Zhang、Borivoje Nikolić、Christopher W. Fletcher、Sagar Karandikar 均署名加州大学伯克利分校。作者称 MiracleGro loop 将来开源，目前论文不是已发布代码制品的证明。<a href="https://arxiv.org/abs/2611.26517v1">版本记录</a> · <a href="https://arxiv.org/html/2611.26517v1">公开全文</a></p>
+<p>作者的基线配置为 <code>rv64imafdczicsr_zifencei_zihpm</code>、Sv39、四发射、128 项 ROB；内存/整数/浮点发射队列为24/40/32项。L1 D-cache 为32 KiB、16个 MSHR，L2 为4 MiB、四 bank、每 bank 22个 MSHR。它没有列入 V 扩展，不能把此结果直接套用于 RVV 的 VLEN 与 VRF 端口取舍。<a href="https://arxiv.org/html/2611.26517v1#S2">基线配置表1</a></p>
+<p><strong class="entry-label">问题。</strong> 从四发射 BOOM RTL 出发，让 AI 只追 IPC，容易把原先跨拍的 miss 路径改成同拍请求/响应，穿过 ROB、MSHR、prefetch、SoC bus 与 LSU，省掉模拟周期却拉长组合路径。作者的 IPC-only 迭代曾出现关键路径约变为原来的 2.5×，抵消性能收益。</p>
+<p><strong class="entry-label">AI 操作与产物。</strong> MiracleGro 的后续 loop 把目标改成按频率折算的执行时间。结构分析代理读取 counters 和 traces，提出一个微架构变化；时序代理读取综合关键路径，在局部模块上做 A/B；实现与合并代理产出 RTL。评估器在代理不能修改的隔离环境中跑性能和综合。loop 用 SPEC CPU2017 的 128 个 checkpoint，每个 20M 指令预热、10M ROI；最后用 FireSim 跑完整 integer speed reference 输入，总计逾 30 万亿条指令，核对输出。最终大负载阶段的少数复杂 bug 仍需要人工指导，不能将“loop 无人工介入”延伸为所有验证均无人参与。<a href="https://arxiv.org/html/2611.26517v1#S3">流程</a> · <a href="https://arxiv.org/html/2611.26517v1#S6">人工边界</a></p>
+<p><strong class="entry-label">效果。</strong> 下表把不同测量层次分开，均为作者结果。</p>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="可横向滚动的表格 9" class="table-scroll" role="region" tabindex="0"><table>
+<thead>
+<tr>
+<th scope="col">条件</th>
+<th scope="col">作者报告</th>
+<th scope="col">能支持的结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FireSim，完整 SPEC CPU2017 integer speed reference</td>
+<td>IPC 几何平均提高 85%</td>
+<td>周期级 RTL 模拟上的收益</td>
+</tr>
+<tr>
+<td>SkyWater 130 nm 综合/模型 SRAM</td>
+<td>频率 69.85→88.37 MHz，面积增 33%</td>
+<td>与上述周期结合，计算执行时间加速 2.34×</td>
+</tr>
+<tr>
+<td>商用 16 nm，loop 外综合</td>
+<td>关键路径反而长约 14%，面积增 21%</td>
+<td>130 nm 的时序优化不能直接迁移工艺</td>
+</tr>
+</tbody>
+</table></div>
+<p>表据<a href="https://arxiv.org/html/2611.26517v1#S4.SS2">完整负载结果和跨工艺分析</a>整理。这里的 2.34× 来自周期级结果与估计频率相乘，不是流片 CPU 的墙钟实测，也不是本刊复现。SPEC 软件和先进 PDK 的访问条件也限制第三方重跑。</p>
+<p><strong class="entry-label">本期可复用做法。</strong> 选一套公开 RISC-V RTL 与自构造微基准，固定 ISA、发射宽度、ROB、缓存和工具版本，把 AI 输出限定为“瓶颈假设→一处改动→预期 counter 变化→可能新增关键路径”。保存 baseline、候选 diff、功能回归结果、cycles、关键路径与面积，使用 <code>cycles × clock_period</code> 排名。候选吞吐提升必须过原有验证；合并两个候选后重新综合，检查单独不长、合在一起却贯穿多个模块的路径。可直接给 AI 的约束是：“不修改评估脚本与期望值；每个结论附计数器或 trace 证据；任何 IPC 增益须同时报告周期与时序；保留反例。”这段是本刊迁移建议，未宣称本期跑通该 loop。</p>
+<h2 id="appendix">线索附录</h2>
+<details class="article-detail">
+<summary>展开规范短条、实验性扩展和待深读线索</summary>
+<div hidden="hidden" id="appendix-search">
+<label for="appendix-query">在本栏筛选关键词</label>
+<input aria-describedby="appendix-status" id="appendix-query" placeholder="例如：TSR、spill、Groq" type="search"/>
+<p aria-live="polite" id="appendix-status" role="status"></p>
+</div>
+<ul>
+<li><strong>特权规范主干 · 11 月 21 日。</strong> <code>3142f66f</code> 将 S-mode、TSR=1 时执行 SRET 的 should 改为 must。TSR 定义已有 trap 要求，本次统一文字强度；不是新批准版本。回归应分别覆盖 S-mode/TSR=0、S-mode/TSR=1，并单列 M-mode，避免扩大 S-mode 限定。<a href="https://github.com/riscv/riscv-isa-manual/commit/3142f66fd71c7ea0326b3687072318aedab587f8">规范差分</a></li>
+<li><strong>LLVM RVV spill 成本 · 11 月 19 日主干。</strong> <code>ad014db3</code> 为 VRRC spill/reload 各计 <code>2 × TCC_Basic</code>，补计栈槽地址形成。测试中 16 次 spill 的成本总计从32到64；这是成本单位，不能说成周期翻倍。可对照高寄存器压力循环的向量化决策、汇编和实测时间。<a href="https://github.com/llvm/llvm-project/commit/ad014db3ef093ebf26cdb099f03eb12ae545a68e">提交与测试</a></li>
+<li><strong>Spike 实验性 tile move · 11 月 20 日合入。</strong> <code>149ca946</code> 将两个移动实现的 <code>tn()</code> 改为 <code>tn(8 * sizeof(type))</code>。本期只核对了差分，默认元素宽度和实验性扩展语义尚待完整追踪，不当作已批准 ISA 新增。<a href="https://github.com/riscv-software-src/riscv-isa-sim/commit/149ca9467c2097b7e0d372bfc900abf8b0f6631d">固定差分</a> · <a href="https://github.com/riscv-software-src/riscv-isa-sim/pull/2569">PR #2569</a></li>
+<li><strong>Frostbite 厂商研究 · 11 月 18 日。</strong> Architect Labs 公开基于 interaction nets 的 CPU 探索与形式契约流程，强调先用 RTL 校准快速模型。其比较为公司报告的流片前结果，对照核未披露型号；RTL、ISA 和 FPGA playground 仍列为后续计划。本期未复现其性能，不据此判断与现代 OoO CPU 的优劣。<a href="https://architectlabs.com/blog/frostbite">原始研究博客</a></li>
+<li><strong>待深读论文 · 11 月 18 日。</strong> <em>CriticNPU</em>，arXiv:2611.24733。已读取全文作初筛，尚未完成作者实验和消融的定点复核，本期不引用其性能数字。<a href="https://arxiv.org/abs/2611.24733v1">原始版本</a></li>
+<li><strong>Groq 模型分区申请公开 · 11 月 19 日。</strong> US20260367992A1，<em>Graph Partitioning and Implementation of Large Models on Tensor Streaming Processors</em>，Groq LLC，最早主张临时申请优先权2022-05-27。属于延续申请，未据本次A1文本核定后续授权状态。独立项11结合水平/垂直切分；直接回引11的项14约束峰值存活地址占用，项18回引17加入芯片间接口。应把 live state 与跨片预算一起评估；本期未复核数值性能。<a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260367992#page=1">官方首页</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260367992#page=36">权利要求11—18</a></li>
+</ul>
+</details>
+<h2 id="vendors">厂商公开动态</h2>
+<h3 id="entry-10">NVIDIA Vera 机架：先分清单 CPU 带宽和跨节点通信</h3>
+<p>厂商公告，NVIDIA，2026-11-16。<a href="https://investor.nvidia.com/news/press-release-details/2026/NVIDIA-Expands-Vera-CPU-Platform-to-Accelerate-Scientific-Discovery/default.aspx">原始发布</a></p>
+<p>内存密集型模拟既要喂饱单节点，也要承担节点间交换。NVIDIA 本周公布 192 颗 Vera CPU 的 HPC 机架，以 Quantum-X800 InfiniBand 连接；披露每 CPU 为 88 核、176 线程、LPDDR5X 带宽最高 1.2 TB/s，整机聚合峰值超过 200 TB/s，计划 2027 年初供货。<strong>聚合本地内存带宽不是任意一个核都能访问的统一带宽，也不代表网络吞吐。</strong> 本条仅采用规格与计划，不转述公告中的跨厂性能倍率。可借鉴的测量是固定节点数和工作集，分别测本地 STREAM、远端通信、halo exchange 与整应用扩展效率；本刊未取得机架进行实测。</p>
+<h3 id="entry-11">Intel Diamond Rapids：峰值资源披露之后，仍要找带宽拐点</h3>
+<p>厂商技术观点，Intel，Jeff McVeigh，2026-11-16。<a href="https://www.intel.com/content/www/us/en/newsroom/opinion/hpc-next-chapter-open-heterogeneous-ai-ready.html">原文</a></p>
+<p>增加核数后，每核可用带宽与缓存容量可能先于执行器饱和。Intel 对未来 Diamond Rapids 披露最高 256 个性能核、最高 1.6 TB/s 内存带宽和最高 1.28 GB LLC，并列出 APX、AVX 10.2 与增强 AMX。它们是未来架构规格，本文没有提供足以比较持续性能的完整测量。可借鉴的是在固定工作集下扫描活动核数，观察总带宽何时停止增加，再扫每核工作集找 LLC 容量拐点；峰值不能直接代替这些曲线。</p>
+<h3 id="entry-12">AMD AI NIC：让 AI 集合通信和 MPI 共享以太网之后怎么测</h3>
+<p>厂商公告，AMD，2026-11-16。<a href="https://newsroom.amd.com/news/sc26-amd-expands-frontier-scientific-computing/">SC26 原始公告</a></p>
+<p>AI 训练和科学模拟共用网络时，大消息吞吐不能说明细粒度 MPI 的尾延迟。AMD 本周表示 AI NIC 技术现支持在同一以太网承载 AI 训练和 MPI 科学模拟，并用于 ORNL 的 Lux 扩展互连。公告未给出足以还原拥塞控制、消息匹配或隔离机制的细节，也未提供本条配置下的微基准。本刊将其视为待验证能力：固定拓扑、进程映射和网卡配置，先分别测 AI 集合通信与 MPI 小消息，再并发运行，对比 p50/p99 延迟、有效带宽与整步时间。上述测试为建议，不能据公告认定二者并发时互不干扰。</p>
+    </article>
+  </main>
+  <footer class="footer">
+    <div class="wrap">
+      <span>处理器架构与矢量设计周刊</span>
+      <a href="/weekly/">往期周刊 <span aria-hidden="true">↗</span></a>
+    </div>
+  </footer>
+  <script>
+    const query = document.getElementById('appendix-query');
+    const status = document.getElementById('appendix-status');
+    if (query && status) {
+      const search = document.getElementById('appendix-search');
+      const entries = Array.from(search.closest('details').querySelectorAll('li'));
+      search.hidden = false;
+      query.addEventListener('input', () => {
+        const term = query.value.trim().toLowerCase();
+        let shown = 0;
+        for (const entry of entries) {
+          entry.hidden = !entry.textContent.toLowerCase().includes(term);
+          if (!entry.hidden) shown += 1;
+        }
+        status.textContent = term ? '找到 ' + shown + ' 条' : '';
+      });
+    }
+
+    const chapters = Array.from(document.querySelectorAll('.contents a[href^="#"]'))
+      .map(link => ({ link, section: document.getElementById(decodeURIComponent(link.hash.slice(1))) }))
+      .filter(chapter => chapter.section);
+    if (chapters.length) {
+      let scheduled = false;
+      function highlightChapter() {
+        let active = chapters[0];
+        for (const chapter of chapters) {
+          if (chapter.section.getBoundingClientRect().top <= 135) active = chapter;
+        }
+        for (const chapter of chapters) {
+          if (chapter === active) chapter.link.setAttribute('aria-current', 'location');
+          else chapter.link.removeAttribute('aria-current');
+        }
+        scheduled = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(highlightChapter);
+      }, { passive: true });
+      highlightChapter();
+    }
+  </script>
+</body>
+</html>
