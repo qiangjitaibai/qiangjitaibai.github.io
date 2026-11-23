@@ -3,78 +3,122 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="羟基太白，数字芯片设计工程师。从事处理器体系结构开发，浙江大学博士。">
+  <meta name="theme-color" content="#f5f3eb">
   <title>自我简介 · 羟基太白</title>
+  <link rel="stylesheet" href="/site.css">
   <link rel="stylesheet" href="/profile.css">
 </head>
 <body>
-  <div class="bg-grid"></div>
-  <div class="bg-glow g1"></div>
-  <div class="bg-glow g2"></div>
-  <main class="container">
-    <nav aria-label="站点导航"><a class="back" href="/">← 返回首页</a></nav>
-  <header>
-    <div class="avatar">⚛️</div>
-    <h1>羟基太白</h1>
-    <div class="title">数字芯片设计工程师 · 处理器体系结构</div>
-    <p class="bio">浙江大学博士。重生之我在大厂写 bug。</p>
-    <div class="tag-row">
-      <span>处理器架构</span><span>RISC-V</span><span>Verilog</span><span>AI 编程</span><span>分析哲学</span>
-    </div>
+  <a class="skip" href="#main">跳至主要内容</a>
+  <header class="masthead wrap">
+    <a class="wordmark" href="/">羟基太白</a>
+    <nav aria-label="站点导航">
+      <ul>
+        <li><a href="/#weekly">周刊</a></li>
+        <li><a href="/about/" aria-current="page">自我简介</a></li>
+        <li><a href="/#guestbook">留言板</a></li>
+      </ul>
+    </nav>
   </header>
 
-  <section>
-    <h2>💼 经历</h2>
-    <div class="timeline">
-      <div class="timeline-item">
-        <div class="period">2021.07 — 至今</div>
-        <div class="org">阿里巴巴平头哥半导体</div>
-        <div class="role">处理器体系结构开发</div>
+  <main class="wrap" id="main">
+    <div class="hero profile-hero">
+      <div>
+        <h1>羟基太白</h1>
+        <p class="intro profile-role">数字芯片设计工程师 · 处理器体系结构</p>
+        <p class="profile-bio">浙江大学博士。重生之我在大厂写 bug。</p>
       </div>
-      <div class="timeline-item">
-        <div class="period">2016.05 — 2021.06</div>
-        <div class="org">华为海思 · 信道研发部</div>
-        <div class="role">高级工程师</div>
-        <div class="desc">2018.09 – 2021.06 蓝牙 Controller 基带 MAC 模块负责人<br>2016.05 – 2018.08 卫星电视接收信道芯片 核心成员</div>
-      </div>
-      <div class="timeline-item">
-        <div class="period">2009.06 — 2016.04</div>
-        <div class="org">杭州中天微系统 · CPU 设计部</div>
-        <div class="role">实习生</div>
-        <div class="desc">参与多款处理器体系结构的设计和验证</div>
+      <div class="profile-topics">
+        <h2>关注方向</h2>
+        <ul>
+          <li>处理器架构</li>
+          <li>RISC-V</li>
+          <li>Verilog</li>
+          <li>AI 编程</li>
+          <li>分析哲学</li>
+        </ul>
       </div>
     </div>
-  </section>
 
-  <section>
-    <h2>🎓 教育</h2>
-    <div class="edu-item">
-      <div class="degree">博士 · 超大规模集成电路设计</div>
-      <div class="school">浙江大学 · 超大规模集成电路设计研究所</div>
-      <div class="date">2010.09 — 2016.03</div>
-    </div>
-    <div class="edu-item">
-      <div class="degree">学士 · 电子信息工程 + 工商管理 + 荣誉工学</div>
-      <div class="school">浙江大学 · 电气工程学院 / 管理学院 / 竺可桢学院</div>
-      <div class="date">2006.09 — 2010.06</div>
-    </div>
-  </section>
+    <section class="section" aria-labelledby="experience-title">
+      <h2 id="experience-title">经历</h2>
+      <div class="section-body">
+        <ol class="entries">
+          <li class="entry">
+            <div class="entry-heading">
+              <h3>阿里巴巴平头哥半导体</h3>
+              <p class="entry-period"><time datetime="2021-07">2021.07</time> — 至今</p>
+            </div>
+            <p class="entry-detail">处理器体系结构开发</p>
+          </li>
+          <li class="entry">
+            <div class="entry-heading">
+              <h3>华为海思 · 信道研发部</h3>
+              <p class="entry-period"><time datetime="2016-05">2016.05</time> — <time datetime="2021-06">2021.06</time></p>
+            </div>
+            <p class="entry-detail">高级工程师</p>
+            <ul class="entry-projects">
+              <li><span class="entry-period"><time datetime="2018-09">2018.09</time> — <time datetime="2021-06">2021.06</time></span> <span>蓝牙 Controller 基带 MAC 模块负责人</span></li>
+              <li><span class="entry-period"><time datetime="2016-05">2016.05</time> — <time datetime="2018-08">2018.08</time></span> <span>卫星电视接收信道芯片 核心成员</span></li>
+            </ul>
+          </li>
+          <li class="entry">
+            <div class="entry-heading">
+              <h3>杭州中天微系统 · CPU 设计部</h3>
+              <p class="entry-period"><time datetime="2009-06">2009.06</time> — <time datetime="2016-04">2016.04</time></p>
+            </div>
+            <p class="entry-detail">实习生。参与多款处理器体系结构的设计和验证。</p>
+          </li>
+        </ol>
+      </div>
+    </section>
 
-  <section>
-    <h2>🛠️ 技能</h2>
-    <div class="skill-cloud">
-      <span>处理器体系结构</span><span>Verilog / SystemVerilog</span><span>C</span><span>Python</span><span>Perl</span>
-      <span>数字电路设计流程</span><span>蓝牙协议</span><span>RISC-V</span>
-    </div>
-  </section>
+    <section class="section" aria-labelledby="education-title">
+      <h2 id="education-title">教育</h2>
+      <div class="section-body">
+        <ol class="entries">
+          <li class="entry">
+            <div class="entry-heading">
+              <h3>博士 · 超大规模集成电路设计</h3>
+              <p class="entry-period"><time datetime="2010-09">2010.09</time> — <time datetime="2016-03">2016.03</time></p>
+            </div>
+            <p class="entry-detail">浙江大学 · 超大规模集成电路设计研究所</p>
+          </li>
+          <li class="entry">
+            <div class="entry-heading">
+              <h3>学士 · 电子信息工程 + 工商管理 + 荣誉工学</h3>
+              <p class="entry-period"><time datetime="2006-09">2006.09</time> — <time datetime="2010-06">2010.06</time></p>
+            </div>
+            <p class="entry-detail">浙江大学 · 电气工程学院 / 管理学院 / 竺可桢学院</p>
+          </li>
+        </ol>
+      </div>
+    </section>
 
-  <footer>
-    <p>认真生活，快乐工作</p>
-    <div>
-      <a href="https://github.com/qiangjitaibai">GitHub</a>
-      <span style="color:var(--sub);margin:0 8px">·</span>
-      <a href="mailto:qiujingqiujing@foxmail.com">Email</a>
-    </div>
-  </footer>
+    <section class="section" aria-labelledby="skills-title">
+      <h2 id="skills-title">技能</h2>
+      <div class="section-body">
+        <ul class="profile-skills">
+          <li>处理器体系结构</li>
+          <li>Verilog / SystemVerilog</li>
+          <li>C</li>
+          <li>Python</li>
+          <li>Perl</li>
+          <li>数字电路设计流程</li>
+          <li>蓝牙协议</li>
+          <li>RISC-V</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="profile-footer">
+      <p>认真生活，快乐工作</p>
+      <ul>
+        <li><a class="text-link" href="https://github.com/qiangjitaibai">GitHub</a></li>
+        <li><a class="text-link" href="mailto:qiujingqiujing@foxmail.com">Email</a></li>
+      </ul>
+    </footer>
   </main>
 </body>
 </html>
