@@ -59,6 +59,8 @@
   text-wrap: balance;
 }
 
+.entry h3 span { white-space: nowrap; }
+
 .entry-period {
   margin: 0;
   color: var(--muted);
