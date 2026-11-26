@@ -352,17 +352,17 @@ tr:last-child td { border-bottom: none; }
 <h3 id="entry-01">MaskPE：装权重时恢复位置，执行时复用掩码关掉无效乘积</h3>
 <p><em>MaskPE: One Mask, Two Roles: Weight Placement and MAC Gating in Systolic Arrays</em></p>
 <p>论文预印本，arXiv:2611.26432v1，2026-11-19 17:08 UTC（北京时间 11 月 20 日 01:08）提交。Shu-Lin Shih、Chandra Sekhar Mummidi、Aamir Gujral Elhaissouni、Sandip Kundu，均署名美国马萨诸塞大学阿默斯特分校。未找到独立的公开代码入口。<a href="https://arxiv.org/abs/2611.26432v1">版本记录</a> · <a href="https://arxiv.org/html/2611.26432v1">公开全文</a></p>
-<p><strong class="entry-label">问题。</strong> 权重驻留的脉动阵列中，压缩 <code>[5,0,3,0]</code> 得到 <code>[5,3]</code> 后，不能直接把两个非零值塞给相邻 PE：这样会把 <code>5a₀+3a₂</code> 算成 <code>5a₀+3a₁</code>。非结构化剪枝省了存储，却仍要把权重放回原坐标，并让零权重位置继续转发激活和部分和。</p>
-<p><strong class="entry-label">方法。</strong> MaskPE 把不规则性留在每个 tile 的预装阶段。banked 存储中的非零值流配合位置 bitmap，经每列 streaming decoder 还原为固定长度的 <code>(weight,sel)</code> 流；每个 PE 保存自己的驻留权重和 <code>sel</code>。执行阶段，<code>valid_in &amp;&amp; sel</code> 决定乘积寄存器的时钟使能。关时钟后寄存器可能保留上个 tile 的旧乘积，因此还要在送往 INT32 累加器前用 <code>sel</code> 把乘积屏蔽为零。激活转发继续运行，部分和寄存器按延迟后的有效位更新。<a href="https://arxiv.org/html/2611.26432v1#S4">位置恢复与 PE 数据通路</a></p>
-<p>下面是本刊按公开机制整理的最小例子，依次看“是否消费值”和“是否更新乘积”；这是说明表，并非作者测量图。</p>
-<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="可横向滚动的表格 1" class="table-scroll" role="region" tabindex="0"><table style="min-width:42rem">
+<h4 id="entry-01-part-1">一列权重为什么不能直接压紧</h4>
+<p>在权重驻留阵列里，每个处理单元（PE）先装好一个权重。计算时，激活值和部分和沿固定方向逐拍传给相邻的 PE。某个 PE 收到自己的激活值后，用驻留权重做乘法，再把乘积加到传来的部分和。这里的「部分和」就是已经加了前几项、还要继续往下传的累加值。可以把一列权重理解为一个输出通道要用到的一批系数。</p>
+<p>假设其中四个权重是 <code>[5,0,3,0]</code>，相应激活为 <code>[2,4,7,9]</code>。正确结果是 <code>5×2+3×7=31</code>。只把压紧后的 <code>[5,3]</code> 塞给相邻位置，会把第二个非零权重交给接收 4 的 PE，结果变成 22。剪枝删掉的是权重的存储值，原位置对应的激活和部分和仍沿原来的路线走。</p>
+<div aria-label="MaskPE 表格 1" class="table-scroll" role="region" tabindex="0"><table style="min-width:21rem">
 <thead>
 <tr>
-<th scope="col">原位置</th>
-<th scope="col" style="white-space:nowrap">bitmap</th>
-<th scope="col">从压缩值流消费</th>
-<th scope="col">预装进 PE</th>
-<th scope="col">有效激活到来时</th>
+<th scope="col" style="white-space:nowrap">位置</th>
+<th scope="col" style="white-space:nowrap">位图</th>
+<th scope="col" style="white-space:nowrap">取值</th>
+<th scope="col" style="white-space:nowrap">权重 / sel</th>
+<th scope="col" style="white-space:nowrap">乘积</th>
 </tr>
 </thead>
 <tbody>
@@ -370,75 +370,165 @@ tr:last-child td { border-bottom: none; }
 <td>0</td>
 <td style="text-align: right;">1</td>
 <td>5</td>
-<td>weight=5，sel=1</td>
-<td>更新乘积并累加</td>
+<td>5 / 1</td>
+<td>10</td>
 </tr>
 <tr>
 <td>1</td>
 <td style="text-align: right;">0</td>
-<td>不消费</td>
-<td>weight=0，sel=0</td>
-<td>停乘积寄存器；屏蔽旧乘积；照常转发</td>
+<td>无</td>
+<td>0 / 0</td>
+<td>屏蔽为 0，部分和继续传</td>
 </tr>
 <tr>
 <td>2</td>
 <td style="text-align: right;">1</td>
 <td>3</td>
-<td>weight=3，sel=1</td>
-<td>更新乘积并累加</td>
+<td>3 / 1</td>
+<td>21</td>
 </tr>
 <tr>
 <td>3</td>
 <td style="text-align: right;">0</td>
-<td>不消费</td>
-<td>weight=0，sel=0</td>
-<td>停乘积寄存器；屏蔽旧乘积；照常转发</td>
+<td>无</td>
+<td>0 / 0</td>
+<td>屏蔽为 0，部分和继续传</td>
 </tr>
 </tbody>
 </table></div>
-<p>实际 32 行 decoder 按 bottom-first 次序预装。下一 tile 的 bank 请求、每列缓冲与位置计算和当前 tile 计算重叠。作者的 decoder 在应消费非零值却无值可用时报告 underflow，并不会停住固定预装时序；“按时供到”因此是正确性条件，不能只看平均带宽。<a href="https://arxiv.org/html/2611.26432v1#S4.SS2">decoder 细节</a></p>
-<p><strong class="entry-label">效果与边界。</strong> 作者实现 32×32 INT8 乘法、INT32 累加阵列，比较相同精度、尺寸和执行时序的 dense WS。Llama 3.2 1B 第 8 层七种 projection 经 Wanda 做 50% 非结构化剪枝；每种 projection 的能耗只抽样三个输出 tile。在 Nangate45、Yosys/ABC、OpenROAD 和 OpenSTA 的 RTL/布局后时钟树分析中，逻辑加模型权重内存能耗低 <strong>12.5%–14.4%</strong>，不包含两方案共用的激活与累加存储器，权重 SRAM 能耗由访问记录和 Accelergy 系数估算，属于混合估计而非芯片实测。512 个 tile 的位置流和 32,768 个输出均与 dense reference 一致，稳态 tile 间隔不变。在 tile 粒度外部供数模型下，带宽受限时最高 <strong>1.53×</strong>；供数充足后两者受相同阵列时序限制，收益回到 <strong>1×</strong>。该模型不包含逐事务 DRAM 与逐拍背压。<a href="https://arxiv.org/html/2611.26432v1#S5">实验方法及结果</a></p>
-<p><strong class="entry-label">可借鉴。</strong> 为“非零 tile→全零 tile→非零 tile”的连续序列做定向回归：给乘积寄存器预先留下非零值，检查零 tile 期间部分和仍按期转发且没有旧值污染；再构造非零值集中在同一 bank、接近预装 deadline 的列，检查 underflow。性能上固定阵列和 batch，扫权重字节/周期，分别统计预装等待与阵列忙拍，才能区分“少搬数据”与“少做算术”的收益。本条没有独立复现作者结果。</p>
+<p>这是四个位置的手算例子。表按逻辑位置编号，真实预装按第 31 行到第 0 行扫描。<a href="https://arxiv.org/html/2611.26432v1#S3.SS2">权重驻留与位置恢复</a></p>
+<h4 id="entry-01-part-2">创新点与实现细节</h4>
+<ol>
+<li><strong>同一份 bitmap 用两次。</strong> 每列解码器扫描 bitmap。遇到 1 就从非零值 FIFO 取一项，发出 <code>(weight,sel=1)</code>。遇到 0 就发出 <code>(0,0)</code>，FIFO 的读指针停在原处。每列都输出 32 项，用固定 32 拍装入阵列，无需先在片上存储器里拼出一份稠密权重，再转存给 PE。PE 把 <code>sel</code> 和 weight 一起保存，后面的激活可以反复使用这两项状态。论文的贡献在于把压缩值定位和乘积寄存器使能接到同一个位置位上。<a href="https://arxiv.org/html/2611.26432v1#S4.SS2">解码器</a> · <a href="https://arxiv.org/html/2611.26432v1#S4.SS3">PE</a></li>
+<li><strong>关闭寄存器时钟后，还要挡住旧乘积。</strong> <code>valid_in &amp;&amp; sel</code> 控制乘积寄存器是否更新。例如上一个 tile 在某个 PE 留下乘积 21，下个 tile 的权重为零。此时停钟会让寄存器仍读出 21。MaskPE 用 <code>sel</code> 屏蔽扩展到 INT32 的乘积，让累加器在该位置加 0。部分和寄存器由延迟一拍的有效信号控制，激活仍转发。论文因此保留原阵列的节拍，同时少翻转一部分寄存器和时钟树。乘法组合逻辑和累加路径的能耗还要单独算。<a href="https://arxiv.org/html/2611.26432v1#S4.SS3">PE 数据通路</a></li>
+<li><strong>让供数承受不规则访问，阵列按固定节拍工作。</strong> 非零 INT8 值紧密排列，列与列之间不补齐。每个 tile 的目录花 27 B：3 B 存起始地址，另用 32 个六位字段存各列的非零数。先对列计数求前缀和就能找到各列的起点。例如前两列分别有 3 和 5 个非零，随后一列从值流偏移 8 B 处开始。双槽表保存各列偏移，算当前 tile 时可以准备下一份。32 列的读请求共享 8 个各有一个读口的 bank，碰撞按轮转仲裁。bank 返回 32 位字，地址最低两位挑出所需 INT8，再进各列的缓冲。每列解码端可缓冲两个 bitmap 字节，值 FIFO 深度也是两项。碰到 1 时 FIFO 为空会报 underflow，解码器不会等数据再走下一拍。供数验证要问最堵的一列能不能赶上预装。<a href="https://arxiv.org/html/2611.26432v1#S4.SS1">地址和仲裁</a> · <a href="https://arxiv.org/html/2611.26432v1#S4.SS2">预装次序</a></li>
+</ol>
+<h4 id="entry-01-part-3">作者测到了什么</h4>
+<p>作者用 32×32 阵列做 INT8 乘法、INT32 累加。稠密基线采用相同阵列尺寸、精度和执行节拍，两边喂同一组权重及激活。主案例是 Llama 3.2 1B 第 8 层的七个投影矩阵，经 Wanda 剪枝去掉 50% 权重。每个投影的能耗只抽三个输出 tile。其余多项实验用 <code>gate_proj</code> 的 512 个权重 tile（K=2048、N=256，主要配置 M=128）。RTL 对照中，16,384 条解码列流和 32,768 个输出值全部相符。随 M 取 1、4、16、128，稠密和 MaskPE 的稳态 tile 间隔分别同为 100、103、115、227 拍。论文报告下一 tile 准备约花 36 拍，测试条件下可被前一 tile 计算覆盖。<a href="https://arxiv.org/html/2611.26432v1#S5">实验设置与逐项结果</a></p>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="MaskPE 表格 2" class="table-scroll" role="region" tabindex="0"><table style="min-width:36rem">
+<thead>
+<tr>
+<th scope="col">观察项</th>
+<th scope="col">作者结果</th>
+<th scope="col">比较范围</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>压缩容量</td>
+<td>权重存储少 34.9%</td>
+<td>50% 稀疏，计入元数据</td>
+</tr>
+<tr>
+<td>面积</td>
+<td>逻辑加权重 SRAM 面积少 15.04%</td>
+<td>Nangate45 逻辑与 FakeRAM45 宏估算</td>
+</tr>
+<tr>
+<td>能耗</td>
+<td>每种投影样本少 12.5% 至 14.4%</td>
+<td>时钟树综合后的逻辑能耗加权重 SRAM 模型</td>
+</tr>
+<tr>
+<td>供数受限时的速度</td>
+<td>最高 1.53×，带宽充足时趋近 1×</td>
+<td>每阵列 2、4、8、16、32 B/拍的 tile 供数模型</td>
+</tr>
+</tbody>
+</table></div>
+<p>能耗数字合并了两部分。Yosys/ABC 综合 RTL，OpenROAD 做布局与时钟树综合（CTS），OpenSTA 用门级翻转活动估算逻辑能耗。权重 SRAM 另用访问计数和 Accelergy 系数估算。两边共用的激活与累加存储不在这个数字里。带宽模型只在 tile 开始握手处控制权重何时可用，未模拟逐笔 DRAM 访问或逐拍背压。400 MHz 是作者物理实现的目标频率，所报检查在指定的 0.8 ns 主机接口时钟插入假设下通过。本刊未运行该 RTL。<a href="https://arxiv.org/html/2611.26432v1#S5.SS1">实验条件</a></p>
+<p>用一个简化模型就能看懂带宽曲线为何会收敛。设两种阵列的稳态间隔都为 100 拍，下一批权重可以与当前 tile 重叠搬运，且每拍可搬 8 B。只算 1024 B 稠密权重时，搬完要 128 拍，仍有 28 拍露在计算之外。若要搬的数据减到 667 B，理想情况约需 84 拍，100 拍的计算窗口能遮住这段搬运。改成每拍 16 B 后，稠密和压缩各要 64 拍和约 42 拍，两边都已经被 100 拍的阵列节拍卡住。增大 batch 也有相似效果。同一组驻留权重可以处理更多行激活，当前 tile 的计算窗口拉长后，留给下一组权重的预取时间也变多。这里的带宽、搬运量和重叠假设只是解释拐点的手算，实际收益还取决于外部握手、bank 争用和预装何时拿到各列首批数据。<a href="https://arxiv.org/html/2611.26432v1#S5">作者的带宽实验</a></p>
+<h4 id="entry-01-part-4">另两个结果与可以照着做的回归</h4>
+<ul>
+<li><strong>收益随稀疏度变化。</strong> 作者在另一组稀疏度实验里报告，权重全非零时增加的逻辑与存储开销让能耗上升 2.6%。其设定下，50% 和 90% 稀疏分别节省 12.7% 和 29.1%。单独关闭 bitmap 对乘积寄存器的门控做消融，50% 稀疏下门控带来的 PE 阵列能耗降幅为 5.1%，口径是 CTS 前的阵列能耗，和表里的整套逻辑加权重内存不同。<a href="https://arxiv.org/html/2611.26432v1#S5">稀疏度与仅门控消融</a></li>
+<li><strong>先算压缩账。</strong> 按论文的位图模型手算，1024 个 INT8 权重原占 1024 B。剩一半非零时是 512 B 的值加 128 B 的位图。再按该实现加 27 B 目录，合计 667 B，约少 34.9%，尚未把运行缓冲折算进去。换成更窄的权重时，下一步应先重算每个位置一位的开销。<a href="https://arxiv.org/html/2611.26432v1#S2.SS3">压缩表示</a> · <a href="https://arxiv.org/html/2611.26432v1#S4.SS1">目录格式</a></li>
+<li><strong>测试旧值和供数截止点。</strong> 建议先跑「非零、全零、非零」三个 tile，让第一个留下非零乘积。观察全零 tile 是否仍按预期拍输出部分和，且结果与稠密参考相符。再把非零分布换成集中争用一个 bank 的输入，记录每列首个 underflow、FIFO 水位和预装结束拍。性能比较固定 batch、精度与阵列尺寸，分别数等待权重的拍和阵列在算的拍。前一项下降而后一项不变时，就能定位收益来自供数。</li>
+</ul>
 <h2 id="general">通用处理器架构</h2>
 <h3 id="entry-02">LeafPack：压缩共享缓存中的页表叶行，给应用数据留出容量</h3>
 <p><em>Compressing Page-Table Leaves in Shared Caches</em></p>
 <p>论文预印本，arXiv:2611.24992v1，2026-11-18 12:38 UTC（北京时间 20:38）提交。Samarth Narang 署名纽约大学与 NVIDIA；Aamer Jaleel 署名 NVIDIA；Brandon Reagen 署名纽约大学。arXiv 记录题名如上，全文内题名为 <em>Pack Light, Walk Fast: Compact Page-Table Residency in Shared Caches</em>；全文的会议/DOI 行含占位信息，本刊只按预印本报道，未核实正式录用。未找到作者独立代码入口。<a href="https://arxiv.org/abs/2611.24992v1">版本与原题</a> · <a href="https://arxiv.org/html/2611.24992v1">公开全文</a></p>
-<p><strong class="entry-label">问题。</strong> 4 KiB 页和 8 B PTE 下，一条 64 B 叶页表行覆盖 32 KiB 虚拟空间。页表遍历把这类行留在共享缓存，能少访问 DRAM，却会挤走同核运行或其他核的应用数据。单纯提高页表行保留优先级，可能让地址翻译更快、整体程序反而更慢。</p>
-<p><strong class="entry-label">方法。</strong> LeafPack 保留内存里的架构页表格式，让 walker 给请求标明“叶页表访问”，只改变共享缓存的驻留表示。同一行八个 PTE 的 PFN 连续且全部非 PFN 位一致时，用起始描述符恢复整行；否则走未压缩回退。Packed 格式分别保存各叶行起始描述符；Dense 格式跨行共享基准，用偏移描述起始 PFN。每条叶行仍有独立有效位和一致性状态，写入导致格式不再适配时必须展开或写回。<a href="https://arxiv.org/html/2611.24992v1#S3.SS1">压缩条件</a> · <a href="https://arxiv.org/html/2611.24992v1#S3.SS4">一致性处理</a></p>
-<p>下表按原文格式整理，比较满槽覆盖与命中恢复成本；未绘制或转载论文图像。</p>
-<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="可横向滚动的表格 2" class="table-scroll" role="region" tabindex="0"><table>
+<h4 id="entry-02-part-1">一次 TLB miss 为什么会挤到别的程序</h4>
+<p>TLB 缓存的是已经完成的地址翻译。TLB 没有命中时，硬件页表遍历器（walker）从上一级页表指针读到下一级，最终从叶页表项（PTE）得到物理页帧号和权限。上层描述符可能已被页表遍历缓存记住，最后一级依然需要读。以 4 KiB 页和 8 B PTE 为例，64 B cache line 装八个叶 PTE，因此一次填充覆盖 32 KiB 虚拟空间的翻译。这里的 64 B 是页表记录的存储量，32 KiB 才是这组记录能翻译的地址范围。</p>
+<p>例如图计算程序沿着指针访问很大的数据集，会在共享 L2 留下大量叶行。同一期间，另一个核可能反复读取一个本来能留在 L2 的小工作集。若总给叶行更高的保留优先级，前一程序的 walker 少等了 DRAM，后一程序却要从 DRAM 把自己的数据重新拿回来。LeafPack 让 walker 标出叶访问，在共享缓存里缩小规则叶行的驻留表示。内存中的 64 B 页表行和 walker 的遍历算法沿用原来的格式与语义。<a href="https://arxiv.org/html/2611.24992v1#S2">问题与翻译层级</a></p>
+<h4 id="entry-02-part-2">创新点与实现细节</h4>
+<ol>
+<li><strong>先压行内，再决定能否跨行共享描述符。</strong> 假设八个 PTE 的物理页帧号是 100 到 107，八个描述符都有效，权限、访问位、脏状态及软件自用位也相同。存下第一个 8 B PTE，重建时把页帧号逐项加一，其他位照抄即可。若第三个 PTE 无效、权限不同，或者物理帧跳到了 300，整行需要保留完整 64 B。Packed 给每条可压行留自己的起始描述符，行与行可以有不同的权限和起始帧。Dense 在同一页表物理区域内共用一个基准描述符，另外存每条叶行开头的有符号 20 位帧偏移，范围约为 ±2 GiB。举例说，下一条规则行若从物理帧 140 开始、属性与基准一致，存偏移 +40 就能恢复它。两种方式都允许单条行内部的覆盖范围保持不变。<a href="https://arxiv.org/html/2611.24992v1#S3.SS1">压缩条件与两种编码</a></li>
+<li><strong>让压缩行能定位、也能单独失效。</strong> 页表所在的物理地址先按 1 KiB 对齐划成区域。这里的地址指 PTE 本身放在哪，和 PTE 所映射的物理页地址是两回事。普通查找用原来的 set 索引，压缩查找还检查用区域前缀算出的 packed set。该区域的 16 条行用地址位 [9:6] 编号，命中必须同时匹配区域标签和该行的有效位。于是，对某条叶行的失效只需清自己的有效位，同槽其他行仍可命中。写入时如果仍符合编码就原位更新。写入破坏编码时，可以把该行展开到原槽并逐出其余行。若同槽另有未完成的 miss，论文给出把更新行写回内存的路径。相反，替换策略的淘汰单位是整槽，一次可能逐出多条叶行。这里要分别检查一致性和替换两条路径。<a href="https://arxiv.org/html/2611.24992v1#S3.SS3">查找与替换</a> · <a href="https://arxiv.org/html/2611.24992v1#S3.SS4">一致性与写回</a></li>
+<li><strong>按实际访存行为决定页表可占多少路。</strong> 控制器用少量 leader sets 采样，把压缩 15 路、压缩 5 路和未压缩 3 路三个上限放在同一组负载下比较。压缩候选各用 32 个真实采样 set，另用 shadow tags 估算不压缩时会不会命中。计数器按各核的 L2 访问频率给 miss 加权，让访问较少的同跑程序也能影响决策。上限调低后，超额组仍能命中，直到应用数据缺路时才回收。若写缓冲装不下待写回的行，就保留该组，后续再继续。这样切换上限不必一次清空整个缓存。<a href="https://arxiv.org/html/2611.24992v1#S3.SS5">控制器与组回收</a></li>
+</ol>
+<h4 id="entry-02-part-3">80 B 怎么算，什么时候真能腾出空间</h4>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="LeafPack 表格 1" class="table-scroll" role="region" tabindex="0"><table style="min-width:36rem">
 <thead>
 <tr>
-<th scope="col">叶行表示</th>
-<th scope="col" style="text-align: right;">一个逻辑槽覆盖</th>
-<th scope="col" style="text-align: right;">逻辑槽占用</th>
-<th scope="col" style="text-align: right;">额外命中解码</th>
+<th scope="col">表示</th>
+<th scope="col" style="text-align: right;">每个槽最多覆盖</th>
+<th scope="col" style="text-align: right;">槽占用</th>
+<th scope="col" style="text-align: right;">命中额外解码</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Packed</td>
-<td style="text-align: right;">最多 8×64 B</td>
-<td style="text-align: right;">80 B（含槽 metadata）</td>
-<td style="text-align: right;">2 周期</td>
+<td style="text-align: right;">8 条 64 B 叶行</td>
+<td style="text-align: right;">80 B</td>
+<td style="text-align: right;">2 拍</td>
 </tr>
 <tr>
 <td>Dense</td>
-<td style="text-align: right;">最多 16×64 B</td>
-<td style="text-align: right;">80 B（含槽 metadata）</td>
-<td style="text-align: right;">3 周期</td>
+<td style="text-align: right;">16 条 64 B 叶行</td>
+<td style="text-align: right;">80 B</td>
+<td style="text-align: right;">3 拍</td>
 </tr>
 <tr>
-<td>不规则叶行</td>
-<td style="text-align: right;">保留原始 64 B 行</td>
-<td style="text-align: right;">按原文回退路径存放</td>
-<td style="text-align: right;">无法套用上述压缩比</td>
+<td>原样存放</td>
+<td style="text-align: right;">1 条 64 B 叶行</td>
+<td style="text-align: right;">普通 way 或转换组中的原样槽</td>
+<td style="text-align: right;">按实际回退路径</td>
 </tr>
 </tbody>
 </table></div>
-<p><strong class="entry-label">80 B 不是缓存全部开销。</strong> 四条 64 B payload way 配一条 metadata way，形成五路物理组；tag array 中另存区域标记和逐行有效位。组未装满时仍占五路，不能把空槽算成可供应用数据使用的空间。控制器用 set dueling 在压缩 5 路、压缩 15 路、未压缩 3 路上限间选择；空出的路可给应用数据，而非静态预留。<a href="https://arxiv.org/html/2611.24992v1#S3.SS2">组织与查找</a> · <a href="https://arxiv.org/html/2611.24992v1#S3.SS5">选择策略</a></p>
-<p><strong class="entry-label">效果与边界。</strong> 作者在 gem5 25.1、Arm 全系统、Linux 4.18、4 KiB 基页、4 GHz OoO 模型和 1–8 核混合负载上评估。small/server 两种核的 ROB 为 128/320 项，共享 16 路 L2，每核 0.5 MiB（单程序至少 1 MiB），基础命中 12 周期。九个翻译密集负载上，相对 <strong>SRRIP 普通缓存</strong>，harmonic speedup 的几何平均改善为 <strong>18.7%/17.7%</strong>；相对默认 random replacement 普通缓存为 <strong>28.7%/28.4%</strong>，不能混用基线。二十个冻结控制器后才评估的 held-out mixes 上，相对默认普通缓存为 <strong>21.4%/18.5%</strong>。这些是作者仿真，不是服务器实机结果；2/3 周期解码也计入模型。大页覆盖充分、PFN 碎片化或压缩组利用率低时收益会缩小；碎片化 XSBench 暴露过候选策略和 miss 归属偏置，作者将后续修正单列消融，未替换原 held-out 控制器。<a href="https://arxiv.org/html/2611.24992v1#S4">平台和指标定义</a> · <a href="https://arxiv.org/html/2611.24992v1#S5.SS6">敏感性与局限</a></p>
-<p><strong class="entry-label">可借鉴。</strong> 对缓存中压缩 metadata 的方案，先把 tag、组内空洞、解码周期和回收写回全部计入，再看容量收益。建议固定 TLB 与 L2 容量，同时扫物理页连续性和数据敏感 co-runner：记录 leaf misses、数据 MPKI、压缩组占用和每核 slowdown。定向测试只改一个 PTE 的权限或 PFN，检查同行重构与同槽其他行失效范围；策略翻转时还应覆盖 outstanding miss 与组回收交错。本刊未运行该模型。</p>
+<p>80 B 包括 64 B 内容和 16 B 槽元数据。物理上是四路内容共用一路元数据，正好把四份 16 B 放进一个 64 B way。标签阵列还需存区域标签和逐行有效位。只要一个组被转换，五条 way 就都计入页表占用，即使其中某个槽只装一条叶行。满槽时 Dense 可用 80 B 表示原来的 1024 B，理论上是 12.8×。作者在静态 15 路实验里测得的中位压缩密度只有 4.7×。八核混合负载的一槽平均只有 3 条叶行，4 GiB SysBench 的一槽平均有 14.9 条。按缓存压力估算收益时，空槽和标签也要入账。<a href="https://arxiv.org/html/2611.24992v1#S3.SS2">槽布局</a> · <a href="https://arxiv.org/html/2611.24992v1#S5.SS3">占用与压缩密度</a></p>
+<h4 id="entry-02-part-4">作者怎么测，哪些负载吃亏</h4>
+<p>作者在 gem5 25.1 的 Arm 全系统模型上用 Linux 4.18 和 4 KiB 基页，模拟 4 GHz 乱序核，覆盖 1 至 8 核。small/server 核的 ROB 分别为 128/320 项，共享 L2 为 16 路，按每核 0.5 MiB 配置且单程序至少 1 MiB，基本命中延迟 12 拍。混跑指标是各程序相对自身在同一基线混跑条件下的 IPC 比值取调和平均。例如两个程序的 IPC 变成 1.5 倍和 0.8 倍，算术平均是 1.15，调和平均约为 1.04。后一个程序的损失会直接压低得分。两种模型内核的统计结果按 small/server 顺序列出。<a href="https://arxiv.org/html/2611.24992v1#S4">平台、基线和指标</a></p>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="LeafPack 表格 2" class="table-scroll" role="region" tabindex="0"><table style="min-width:36rem">
+<thead>
+<tr>
+<th scope="col">负载</th>
+<th scope="col">对照共享 L2</th>
+<th scope="col">调和加速比的几何平均改善</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9 个翻译密集负载</td>
+<td>常规随机替换</td>
+<td>28.7% / 28.4%</td>
+</tr>
+<tr>
+<td>同一批 9 个负载</td>
+<td>常规 SRRIP 替换</td>
+<td>18.7% / 17.7%</td>
+</tr>
+<tr>
+<td>冻结控制器后才跑的 20 组混合负载</td>
+<td>常规随机替换</td>
+<td>21.4% / 18.5%</td>
+</tr>
+<tr>
+<td>同一批 20 组混合负载</td>
+<td>常规 SRRIP 替换</td>
+<td>9.9% / 7.4%</td>
+</tr>
+</tbody>
+</table></div>
+<p>读这组数要看基线有没有变。全是作者的系统仿真，包含 Packed/Dense 的解码拍数。本刊未运行 gem5 复现。<a href="https://arxiv.org/html/2611.24992v1#S5.SS2">主实验</a> · <a href="https://arxiv.org/html/2611.24992v1#S5.SS4">留出负载</a> · <a href="https://arxiv.org/html/2611.24992v1#S5.SS5">替换策略对照</a></p>
+<h4 id="entry-02-part-5">其他结论和可参考的验证</h4>
+<ul>
+<li><strong>页表 miss 几乎消失，混跑还能变慢。</strong> 在 pr+gcc 上，pr 的遍历 miss 从 137 万降到约 1 万，恢复进度后它发出更多会 miss 的数据访问。gcc 的数据被挤出，指令访问进度从 145 万降到 116 万。作者比较了 DRAM 读延迟、总线利用率及 gcc 的 L2 数据 miss，主要限制落在 L2 数据容量。类似试验应同时报告每个程序的 IPC、数据 MPKI 和 walker miss，尤其要看平均数里谁变慢了。<a href="https://arxiv.org/html/2611.24992v1#S5.SS7">与 gcc 混跑的反例</a></li>
+<li><strong>物理碎片会把选路问题暴露出来。</strong> 所测的碎片化 XSBench 中，既有更合适的 10 路上限没进入候选集合，也有未压缩行的 miss 被算到了 packed set 的归属偏差。作者后来把 miss 记到实际存储该行的 set，并推迟进入压缩探测模式，另做消融。原留出实验仍使用先前冻结的控制器。移植时可以先设计「实际填充位置」和「策略所见采样位置」不一致的测试，跟踪计数器是否给正确的候选记分。<a href="https://arxiv.org/html/2611.24992v1#S5.SS6">碎片化与归属消融</a></li>
+<li><strong>建议做单行状态回归。</strong> 在同一 Dense 槽放两条规则叶行，先失效一条，检查另一条仍能重建。再单改一个 PTE 的权限，同时在同槽其他行制造尚未完成的 miss，检查写回后的内容、可见性和是否只留一个可达副本。做空间或延迟比较时，固定 TLB、L2 大小与负载，分别扫物理帧碎片和数据敏感的同跑程序，记录组占用、回收写回次数与每核减速。</li>
+</ul>
 <h2 id="oss">开源项目与规范</h2>
 <h3 id="entry-03">LLVM：向量 gather 的目的寄存器分开以后，异常重启才保得住索引</h3>
 <p>来源类型：开源编译器补丁。LLVM 项目；Craig Topper。PR #224739 于 <strong>2026-11-20 06:40:09 UTC（北京时间 14:40:09）</strong>合入主干，固定提交 <code>a464c446768291a143deb9b3ee7877f159cb4700</code>。这是主干实现，不能据此声称某个已发布 LLVM 版本已包含修复。<a href="https://github.com/llvm/llvm-project/commit/a464c446768291a143deb9b3ee7877f159cb4700">提交与完整差分</a> · <a href="https://github.com/llvm/llvm-project/pull/224739">PR 说明</a></p>
@@ -674,38 +764,51 @@ tr:last-child td { border-bottom: none; }
 <h3 id="entry-09">AI 辅助处理器架构设计：用 IPC 和关键路径共同筛选 BOOM 改动</h3>
 <p><em>From Seed to BLOOM: Autonomously Growing a Better Out-of-Order Core</em></p>
 <p>论文预印本，arXiv:2611.26517v1，2026-11-19 17:59 UTC（北京时间 11 月 20 日 01:59）提交。Angela Cui、Ferran Hermida-Rivera、Jack Toubes（前三位共同贡献）、Jim Fang、Chengyi Lux Zhang、Borivoje Nikolić、Christopher W. Fletcher、Sagar Karandikar 均署名加州大学伯克利分校。作者称 MiracleGro loop 将来开源，目前论文不是已发布代码制品的证明。<a href="https://arxiv.org/abs/2611.26517v1">版本记录</a> · <a href="https://arxiv.org/html/2611.26517v1">公开全文</a></p>
-<p>作者的基线配置为 <code>rv64imafdczicsr_zifencei_zihpm</code>、Sv39、四发射、128 项 ROB；内存/整数/浮点发射队列为24/40/32项。L1 D-cache 为32 KiB、16个 MSHR，L2 为4 MiB、四 bank、每 bank 22个 MSHR。它没有列入 V 扩展，不能把此结果直接套用于 RVV 的 VLEN 与 VRF 端口取舍。<a href="https://arxiv.org/html/2611.26517v1#S2">基线配置表1</a></p>
-<p><strong class="entry-label">问题。</strong> 从四发射 BOOM RTL 出发，让 AI 只追 IPC，容易把原先跨拍的 miss 路径改成同拍请求/响应，穿过 ROB、MSHR、prefetch、SoC bus 与 LSU，省掉模拟周期却拉长组合路径。作者的 IPC-only 迭代曾出现关键路径约变为原来的 2.5×，抵消性能收益。</p>
-<p><strong class="entry-label">AI 操作与产物。</strong> MiracleGro 的后续 loop 把目标改成按频率折算的执行时间。结构分析代理读取 counters 和 traces，提出一个微架构变化；时序代理读取综合关键路径，在局部模块上做 A/B；实现与合并代理产出 RTL。评估器在代理不能修改的隔离环境中跑性能和综合。loop 用 SPEC CPU2017 的 128 个 checkpoint，每个 20M 指令预热、10M ROI；最后用 FireSim 跑完整 integer speed reference 输入，总计逾 30 万亿条指令，核对输出。最终大负载阶段的少数复杂 bug 仍需要人工指导，不能将“loop 无人工介入”延伸为所有验证均无人参与。<a href="https://arxiv.org/html/2611.26517v1#S3">流程</a> · <a href="https://arxiv.org/html/2611.26517v1#S6">人工边界</a></p>
-<p><strong class="entry-label">效果。</strong> 下表把不同测量层次分开，均为作者结果。</p>
-<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="可横向滚动的表格 9" class="table-scroll" role="region" tabindex="0"><table>
+<h4 id="entry-09-part-1">每拍退休更多指令，程序也可能跑得更久</h4>
+<p>BLOOM 是论文在现有 BOOM 上改出的乱序核，MiracleGro 是负责提出改动、写 RTL 和筛选版本的流程。作者从一个优化过关键路径的四发射 BOOM 开始。基线 ISA 为 <code>rv64imafdczicsr_zifencei_zihpm</code>，地址翻译采用 Sv39。ROB 有 128 项，访存、整数、浮点发射队列分别有 24、40、32 项。L1 D-cache 为 32 KiB，有 16 个 MSHR。L2 为 4 MiB、四 bank，每个 bank 有 22 个 MSHR。MSHR 记录缓存里还没拿到结果的 miss。配置表给的是标量核，本实验的结果适用于这套 BOOM 和相应负载。<a href="https://arxiv.org/html/2611.26517v1#S2">基线参数和综合方法</a></p>
+<p>IPC 是每个周期平均退休的指令数。一段程序的指令数固定时，执行时间约等于「指令数 ÷ IPC × 周期长度」。例如原方案每拍退休 1 条、每拍 1 ns，100 条指令要 100 ns。改成每拍退休 1.74 条，若时钟必须拉长到 2.5 ns，反而要约 144 ns。这个手算对应论文里一个真实取舍的量级：只追 IPC 的合并候选 m16c0 约提高 74%，但关键路径拉到了基线的 2.5 倍。<a href="https://arxiv.org/html/2611.26517v1#S5.SS1">发生退化的合并候选</a></p>
+<h4 id="entry-09-part-2">创新点与实现细节</h4>
+<ol>
+<li><strong>让代理按电路结构找问题，再用 trace 缩小范围。</strong> 早期循环从性能计数器里挑最大的瓶颈，提案常集中在前端和内存。后续版本给不同代理分派具体结构。最终运行每轮分析四个结构方向，同时运行两轮。反馈包括计数器，以及抽样的流水线与内存事务 trace。作者发现，只有大类计数时很难判断是哪条请求阻塞，原始 VCD 又细到容易让代理只找佐证。抽样 trace 可以用同一条指令或请求把取指、执行和访存的事件对起来。代理还会写低保真的局部模型，先用当前设计的 trace 复核，再试换参数。只对齐了一个设计的模型，在改硬件以后还需重新校准。<a href="https://arxiv.org/html/2611.26517v1#S3.SS1">提案与观测</a> · <a href="https://arxiv.org/html/2611.26517v1#S3.SS4">计数器与 trace</a> · <a href="https://arxiv.org/html/2611.26517v1#S5.SS2">局部模型</a></li>
+<li><strong>在综合结果出来后再给候选排序。</strong> 实现代理写 Chisel RTL，时序代理读关键路径并做局部 A/B。评估用的脚本、测试和预期结果放在代理不能改的环境中。多个改动合并后也重新跑评估，因为组合逻辑可能在模块交界处接成一条更长的同拍路径。m16c0 就把早先的低延迟 miss 路径和预取改动连在一起，从 ROB 经数据缓存 MSHR、L2 预取器和 SoC 总线到 LSU。其中光是让总线请求和响应在一拍内走完，就约占这条关键路径的一半。<a href="https://arxiv.org/html/2611.26517v1#S3">实现与合并流程</a> · <a href="https://arxiv.org/html/2611.26517v1#S5.SS1">合并后的时序路径</a></li>
+<li><strong>搜索时跑代表片段，收尾时跑完整输入。</strong> 作者用 SimPoint 把 SPEC CPU2017 整数负载分成 1000 万条动态指令的区间，再抽取代表性片段。进入迭代的 128 个检查点，每个先预热 2000 万条，再测 1000 万条。作者事先去掉了基线上单次要超过四小时的检查点，整套片段不到 40 亿条动态指令。最后用 FireSim 跑完整 SPECspeed 2017 整数参考输入，总计超过 30 万亿条指令，并检查输出。这个阶段遇到的少数复杂错误需要人工指导。论文称将公开 MiracleGro 循环，当前条目只依据预印本所披露的流程。<a href="https://arxiv.org/html/2611.26517v1#S3.SS5">样本选择</a> · <a href="https://arxiv.org/html/2611.26517v1#S6">完整输入与人工复核</a></li>
+</ol>
+<h4 id="entry-09-part-3">两个值得回看的硬件改动</h4>
+<ul>
+<li><strong>关掉取指前递后，少掉的 IPC 换回了时钟频率。</strong> 迭代 11 的长路径从 TAGE 分支预测器的 SRAM 出发，经取指级和取指缓冲，到译码侧的分支掩码逻辑，最后回到取指缓冲的尾指针。加宽缓冲、提前预测和绕过缓冲直送译码，把原先分开的逻辑接到了一起。迭代 16 关掉提前预测和直送后，相对迭代 11 的关键路径缩短 47%，IPC 降 3%。拿这两个比例手算，同一指令数下执行时间约为原来的 <code>0.53 ÷ 0.97 ≈ 0.55</code>。这给出了为何要同时看周期数和综合周期的量级。<a href="https://arxiv.org/html/2611.26517v1#S5.SS1">前端路径取舍</a></li>
+<li><strong>多个 L2 bank 都在发请求，DRAM 模型却按 ID 排队。</strong> 某个迭代的 L2 有 80 个 MSHR。代理看见来自不同 bank 的 demand miss 在内存 trace 里接连完成，再查 MSHR 占用与带宽，最后追到 AXI ID 分配。各 bank 优先用较小的 ID，容易让并发请求碰到同一 ID。实验用的 DRAM 模型把这些同 ID 请求串行处理。候选改用在途请求尚未占用的 ID 后，作者报告每个负载的 L2 miss 相关周期指标下降 7% 至 32%。此指标用「至少有一个 L2 demand miss 在途的总周期数 ÷ L2 miss 次数」计算，方便比较等待和重叠程度。写微基准时可以固定 bank 数与 MSHR 深度，观察碰撞 ID、每周期可重叠请求数和端到端延迟。<a href="https://arxiv.org/html/2611.26517v1#S5.SS2">内存请求串行的复盘</a></li>
+</ul>
+<h4 id="entry-09-part-4">如何读最终结果</h4>
+<p aria-hidden="true" class="table-hint">宽表可在表格内左右滑动，或聚焦后使用方向键。</p><div aria-label="AI 辅助处理器架构设计 表格 1" class="table-scroll" role="region" tabindex="0"><table style="min-width:36rem">
 <thead>
 <tr>
-<th scope="col">条件</th>
-<th scope="col">作者报告</th>
-<th scope="col">能支持的结论</th>
+<th scope="col">评估口径</th>
+<th scope="col">作者结果</th>
+<th scope="col">如何理解</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>FireSim，完整 SPEC CPU2017 integer speed reference</td>
-<td>IPC 几何平均提高 85%</td>
-<td>周期级 RTL 模拟上的收益</td>
+<td>完整 SPECspeed 2017 整数参考输入，FireSim</td>
+<td>IPC 的几何平均是基线的 1.85×</td>
+<td>来自周期级 RTL 仿真</td>
 </tr>
 <tr>
-<td>SkyWater 130 nm 综合/模型 SRAM</td>
-<td>频率 69.85→88.37 MHz，面积增 33%</td>
-<td>与上述周期结合，计算执行时间加速 2.34×</td>
+<td>SkyWater 130 nm 综合，含模型 SRAM</td>
+<td>估计频率从 69.85 到 88.37 MHz，面积增 33%</td>
+<td>频率比约 1.265，乘以 1.85 得估计执行时间加速 2.34×</td>
 </tr>
 <tr>
-<td>商用 16 nm，loop 外综合</td>
-<td>关键路径反而长约 14%，面积增 21%</td>
-<td>130 nm 的时序优化不能直接迁移工艺</td>
+<td>商用 16 nm 综合，未用于循环反馈</td>
+<td>关键路径相对该工艺的 BOOM 基线长约 14%，面积增 21%</td>
+<td>换工艺后时序收益没有复现</td>
 </tr>
 </tbody>
 </table></div>
-<p>表据<a href="https://arxiv.org/html/2611.26517v1#S4.SS2">完整负载结果和跨工艺分析</a>整理。这里的 2.34× 来自周期级结果与估计频率相乘，不是流片 CPU 的墙钟实测，也不是本刊复现。SPEC 软件和先进 PDK 的访问条件也限制第三方重跑。</p>
-<p><strong class="entry-label">本期可复用做法。</strong> 选一套公开 RISC-V RTL 与自构造微基准，固定 ISA、发射宽度、ROB、缓存和工具版本，把 AI 输出限定为“瓶颈假设→一处改动→预期 counter 变化→可能新增关键路径”。保存 baseline、候选 diff、功能回归结果、cycles、关键路径与面积，使用 <code>cycles × clock_period</code> 排名。候选吞吐提升必须过原有验证；合并两个候选后重新综合，检查单独不长、合在一起却贯穿多个模块的路径。可直接给 AI 的约束是：“不修改评估脚本与期望值；每个结论附计数器或 trace 证据；任何 IPC 增益须同时报告周期与时序；保留反例。”这段是本刊迁移建议，未宣称本期跑通该 loop。</p>
+<p>整体平均会掩盖程序差异。FireSim 中，perlbench 的 IPC 从 1.07 到 2.86，x264 从 2.76 到 3.47。用同一组 Sky130 的估计频率折算，二者加速分别是 3.38× 与 1.59×。这些是论文的周期结果和综合频率推算。复跑还需要相应的 SPEC 输入、RTL 和工具环境。本刊未独立复现。<a href="https://arxiv.org/html/2611.26517v1#S4.SS2">完整结果与跨工艺对照</a></p>
+<h4 id="entry-09-part-5">可以从一条路径开始试</h4>
+<p>给 AI 一段公开 BOOM RTL、一个可手算或对照参考实现的微基准，以及同次运行的计数器、trace 和综合路径。任务写成「从 trace 找一条等待链，指出两端模块与中间资源，提出一处 RTL 改动，并预测哪个计数会变」。先固定 ISA、发射宽度、ROB、缓存参数、综合库和约束。用同一测试跑修改前后版本，核对输出、退休指令数、周期数、周期长度及面积，按 <code>cycles × clock_period</code> 排名。</p>
+<p>如果两个候选各自过关，至少再跑一次合并后的综合和功能回归，重点盯两者接在一起的模块边界。若预取优化只让 MPKI 下降，接下来查需求 miss 的等待拍、预取命中延迟和 tag 端口争用。作者就观察到一种情况：预取器要等 LSU 不读 L1 data tag 才能使用端口，访存繁忙时很少轮到。迭代 29 复制 tag 阵列获得并行访问，在 gcc 中相对其父版本让 L1D MPKI 降 26%，IPC 只增 1.6%。要移植这个思路，应先量化端口等待，再决定复制 tag 的面积是否划算。<a href="https://arxiv.org/html/2611.26517v1#S5.SS2">预取与 tag 端口案例</a></p>
 <h2 id="appendix">线索附录</h2>
 <details class="article-detail">
 <summary>展开规范短条、实验性扩展和待深读线索</summary>
